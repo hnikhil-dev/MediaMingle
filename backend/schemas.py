@@ -41,3 +41,21 @@ class FavoriteResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+# NEW: History Schemas
+class HistoryCreate(BaseModel):
+    content_type: str
+    content_id: str
+    title: str
+    poster_url: Optional[str] = None
+
+class HistoryResponse(BaseModel):
+    id: int
+    content_type: str
+    content_id: str
+    title: str
+    poster_url: Optional[str]
+    viewed_at: datetime
+    
+    class Config:
+        from_attributes = True

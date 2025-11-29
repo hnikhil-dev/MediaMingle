@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Boolean, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -25,6 +25,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     favorites = relationship("Favorite", back_populates="user")
+    history = relationship("History", back_populates="user")
 
 # Favorite Model
 class Favorite(Base):
@@ -33,12 +34,26 @@ class Favorite(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     content_type = Column(String)  # movies, tv, anime
-    content_id = Column(String)    # TMDb ID or MAL ID
+    content_id = Column(String)
     title = Column(String)
     poster_url = Column(String, nullable=True)
     added_at = Column(DateTime, default=datetime.utcnow)
     
     user = relationship("User", back_populates="favorites")
+
+# NEW: History Model
+class History(Base):
+    __tablename__ = "history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    content_type = Column(String)  # movies, tv, anime
+    content_id = Column(String)
+    title = Column(String)
+    poster_url = Column(String, nullable=True)
+    viewed_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="history")
 
 def get_db():
     db = SessionLocal()

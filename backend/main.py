@@ -6,6 +6,8 @@ import requests
 import os
 from dotenv import load_dotenv
 from typing import List, Optional
+from database import get_db, init_db, User, Favorite, History
+from schemas import UserCreate, UserLogin, UserResponse, Token, FavoriteCreate, FavoriteResponse, HistoryCreate, HistoryResponse
 
 # Import our new modules
 from database import get_db, init_db, User, Favorite
@@ -289,3 +291,95 @@ def recommend(mood: str = Query(...), content_type: str = Query("movies")):
         return requests.get(url, params=params).json()
     
     return {"error": "Invalid content type"}
+
+# ============ HISTORY ENDPOINTS ============
+
+@app.post("/history", response_model=HistoryResponse)
+def add_to_history(
+    history: HistoryCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if already in history (viewed in last 24 hours)
+    from datetime import timedelta
+    recent_time = datetime.utcnow() - timedelta(hours=24)
+    
+    existing = db.query(History).filter(
+        History.user_id == current_user.id,
+        History.content_type == history.content_type,
+        History.content_id == history.content_id,
+        History.viewed_at > recent_time
+    ).first()
+    
+    if existing:
+        # Update viewed time
+        existing.viewed_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return existing
+    
+    # Add new history entry
+    new_history = History(
+        user_id=current_user.id,
+        content_type=history.content_type,
+        content_id=history.content_id,
+        title=history.title,
+        poster_url=history.poster_url
+    )
+    db.add(new_history)
+    db.commit()
+    db.refresh(new_history)
+    
+    return new_history
+
+@app.get("/history", response_model=List[HistoryResponse])
+def get_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 20
+):
+    history = db.query(History).filter(
+        History.user_id == current_user.id
+    ).order_by(History.viewed_at.desc()).limit(limit).all()
+    
+    return history
+
+@app.delete("/history")
+def clear_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db.query(History).filter(History.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "History cleared"}
+
+# ============ DETAIL ENDPOINTS ============
+
+@app.get("/movie/{movie_id}")
+def get_movie_details(movie_id: int):
+    # Get movie details
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "append_to_response": "credits,videos,similar"
+    }
+    response = requests.get(url, params=params)
+    return response.json()
+
+@app.get("/tv/{tv_id}")
+def get_tv_details(tv_id: int):
+    # Get TV show details
+    url = f"https://api.themoviedb.org/3/tv/{tv_id}"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "append_to_response": "credits,videos,similar"
+    }
+    response = requests.get(url, params=params)
+    return response.json()
+
+@app.get("/anime/{anime_id}")
+def get_anime_details(anime_id: int):
+    # Get anime details from Jikan
+    url = f"https://api.jikan.moe/v4/anime/{anime_id}/full"
+    response = requests.get(url)
+    return response.json()
