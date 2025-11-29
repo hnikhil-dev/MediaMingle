@@ -13,6 +13,9 @@ function App() {
   const [selectedGenre, setSelectedGenre] = useState("");
   const [loading, setLoading] = useState(false);
   const [featuredContent, setFeaturedContent] = useState(null);
+  const [error, setError] = useState(null);
+  const [retrying, setRetrying] = useState(false);
+
 
   const moods = [
     { value: "happy", icon: Smile, label: "Happy", color: "#fbbf24" },
@@ -29,28 +32,56 @@ function App() {
     anime: ["Shounen", "Slice of Life", "Action", "Romance", "Psychological", "Comedy"]
   };
 
-  const loadTrending = (type) => {
+  const loadTrending = async (type, retryCount = 0) => {
     setLoading(true);
+    setError(null);
+
     const urls = {
-      movies: '${config.API_BASE_URL}/trending-movies',
-      tv: '${config.API_BASE_URL}/trending-tv',
-      anime: '${config.API_BASE_URL}/trending-anime'
+      movies: `${config.API_BASE_URL}/trending-movies`,
+      tv: `${config.API_BASE_URL}/trending-tv`,
+      anime: `${config.API_BASE_URL}/trending-anime`
     };
 
-    fetch(urls[type])
-      .then(res => res.json())
-      .then(data => {
-        const results = type === 'anime' ? (data.data || []) : (data.results || []);
-        setContent(results);
-        if (results.length > 0) {
-          setFeaturedContent(results[0]);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch(urls[type], {
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const results = type === 'anime' ? (data.data || []) : (data.results || []);
+
+      setContent(results);
+      if (results.length > 0) {
+        setFeaturedContent(results[0]);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading content:', err);
+
+      // Retry logic for initial load (backend cold start)
+      if (retryCount < 2 && err.name === 'AbortError') {
+        setRetrying(true);
+        setError('Waking up the server... Please wait.');
+        setTimeout(() => {
+          loadTrending(type, retryCount + 1);
+        }, 3000);
+      } else {
+        setError(err.name === 'AbortError'
+          ? 'Server is taking too long to respond. Please refresh the page.'
+          : 'Failed to load content. Please check your connection and try again.');
+        setLoading(false);
+        setRetrying(false);
+      }
+    }
   };
 
   const handleSearch = async (e) => {
@@ -66,7 +97,7 @@ function App() {
 
     const res = await fetch(urls[activeTab]);
     const data = await res.json();
-    
+
     if (activeTab === 'anime') {
       setContent(data.data || []);
     } else {
@@ -80,16 +111,16 @@ function App() {
     setSelectedGenre("");
     setLoading(true);
     const url = `${config.API_BASE_URL}/recommend?mood=${mood}&content_type=${activeTab}`;
-    
+
     const res = await fetch(url);
     const data = await res.json();
-    
+
     if (activeTab === 'anime') {
       setContent(data.data || []);
     } else {
       setContent(data.results || []);
     }
-    
+
     setLoading(false);
     setShowMoodSelector(false);
   };
@@ -192,7 +223,7 @@ function App() {
   const renderFeaturedSection = () => {
     if (!featuredContent) return null;
 
-    const backdrop = activeTab === 'anime' 
+    const backdrop = activeTab === 'anime'
       ? featuredContent.images?.jpg?.large_image_url
       : `https://image.tmdb.org/t/p/original${featuredContent.backdrop_path || featuredContent.poster_path}`;
 
@@ -208,13 +239,13 @@ function App() {
               {activeTab === 'anime' ? featuredContent.score : featuredContent.vote_average?.toFixed(1)}
             </span>
             <span className="featured-year">
-              {activeTab === 'anime' 
-                ? featuredContent.year 
+              {activeTab === 'anime'
+                ? featuredContent.year
                 : (featuredContent.release_date || featuredContent.first_air_date)?.split('-')[0]}
             </span>
           </div>
           <p className="featured-overview">
-            {activeTab === 'anime' 
+            {activeTab === 'anime'
               ? (featuredContent.synopsis?.slice(0, 180) + '...')
               : (featuredContent.overview?.slice(0, 180) + '...')}
           </p>
@@ -260,21 +291,21 @@ function App() {
 
       <main className="main-content">
         <nav className="content-tabs">
-          <button 
+          <button
             className={`tab-button ${activeTab === 'movies' ? 'active' : ''}`}
             onClick={() => handleTabChange('movies')}
           >
             <Film size={20} />
             <span>Movies</span>
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === 'tv' ? 'active' : ''}`}
             onClick={() => handleTabChange('tv')}
           >
             <Tv size={20} />
             <span>TV Shows</span>
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === 'anime' ? 'active' : ''}`}
             onClick={() => handleTabChange('anime')}
           >
@@ -286,7 +317,7 @@ function App() {
         {renderFeaturedSection()}
 
         <div className="controls-section">
-          <button 
+          <button
             className={`mood-toggle-button ${showMoodSelector ? 'active' : ''}`}
             onClick={() => setShowMoodSelector(!showMoodSelector)}
           >
@@ -329,14 +360,31 @@ function App() {
           </div>
         )}
 
+        {error && (
+          <div className="error-banner">
+            <div className="error-content">
+              <p>{error}</p>
+              {retrying && <div className="retry-spinner"></div>}
+              {!retrying && (
+                <button
+                  className="retry-button"
+                  onClick={() => loadTrending(activeTab)}
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="content-section">
           <h2 className="section-title">
-            {selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` : 
-             selectedGenre ? selectedGenre :
-             `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
+            {selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` :
+              selectedGenre ? selectedGenre :
+                `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
           </h2>
 
-          {loading ? (
+          {loading && !retrying ? (
             <div className="loading-grid">
               {[...Array(12)].map((_, i) => (
                 <div key={i} className="skeleton-card">
@@ -349,18 +397,21 @@ function App() {
           ) : (
             <div className="content-grid">
               {content.length > 0 ? (
-                activeTab === 'anime' 
+                activeTab === 'anime'
                   ? content.map((item, index) => renderCard(item, index))
                   : content.map((item, index) => renderCard(item, index))
               ) : (
-                <div className="empty-state">
-                  <Film size={64} color="#64748b" />
-                  <p>No results found</p>
-                  <span>Try adjusting your search or filters</span>
-                </div>
+                !error && (
+                  <div className="empty-state">
+                    <Film size={64} color="#64748b" />
+                    <p>No results found</p>
+                    <span>Try adjusting your search or filters</span>
+                  </div>
+                )
               )}
             </div>
           )}
+
         </div>
       </main>
 
@@ -373,7 +424,7 @@ function App() {
             </div>
             <p>Your personalized entertainment hub for movies, TV shows, and anime.</p>
           </div>
-          
+
           <div className="footer-section">
             <h4>Quick Links</h4>
             <ul>
@@ -393,7 +444,7 @@ function App() {
             </div>
           </div>
         </div>
-        
+
         <div className="footer-bottom">
           <p>© 2025 MediaMingle. All rights reserved. | Data provided by TMDb & Jikan API</p>
         </div>
