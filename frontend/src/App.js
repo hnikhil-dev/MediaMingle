@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
-import { Search, Sparkles, User, LogOut, Heart, Github, Twitter, Instagram } from 'lucide-react';
+import { Search, Sparkles, User, LogOut, Heart, Github, Twitter, Instagram, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import Auth from './Auth';
 import HomePage from './HomePage';
@@ -11,6 +11,7 @@ function AppContent() {
   const { user, logout, isAuthenticated } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
@@ -18,6 +19,8 @@ function AppContent() {
     e.preventDefault();
     if (!search.trim()) return;
     navigate(`/?search=${encodeURIComponent(search)}`);
+    setShowMobileSearch(false);
+    setSearch("");
   };
 
   const showMyFavorites = () => {
@@ -29,10 +32,11 @@ function AppContent() {
     <div className="app-container">
       <header className="app-header">
         <div className="header-content">
-          <div className="logo-section" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          <div className="logo-section" onClick={() => navigate('/')}>
             <Sparkles className="logo-icon" size={32} />
             <h1>MediaMingle</h1>
           </div>
+
           <nav className="header-nav">
             <div className="search-container-header">
               <form onSubmit={handleSearch} className="search-form-header">
@@ -47,35 +51,61 @@ function AppContent() {
               </form>
             </div>
 
-            {isAuthenticated ? (
-              <div className="user-menu-container">
-                <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
-                  <User size={20} />
-                  <span>{user?.username}</span>
-                </button>
-                
-                {showUserMenu && (
-                  <div className="user-menu-dropdown">
-                    <button onClick={showMyFavorites}>
-                      <Heart size={18} />
-                      My Favorites
-                    </button>
-                    <button onClick={() => { logout(); setShowUserMenu(false); }}>
-                      <LogOut size={18} />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button className="login-button" onClick={() => setShowAuth(true)}>
-                <User size={18} />
-                Sign In
-              </button>
-            )}
+            <button className="search-toggle-btn" onClick={() => setShowMobileSearch(true)}>
+              <Search size={20} />
+            </button>
           </nav>
+
+          {isAuthenticated ? (
+            <div className="user-menu-container">
+              <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
+                <User size={20} />
+                <span>{user?.username}</span>
+              </button>
+              
+              {showUserMenu && (
+                <div className="user-menu-dropdown">
+                  <button onClick={showMyFavorites}>
+                    <Heart size={18} />
+                    My Favorites
+                  </button>
+                  <button onClick={() => { logout(); setShowUserMenu(false); }}>
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button className="login-button" onClick={() => setShowAuth(true)}>
+              <User size={18} />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
       </header>
+
+      {/* Mobile Search Overlay */}
+      {showMobileSearch && (
+        <div className="mobile-search-overlay">
+          <div className="mobile-search-header">
+            <h2 className="mobile-search-title">Search</h2>
+            <button className="mobile-search-close" onClick={() => setShowMobileSearch(false)}>
+              <X size={24} />
+            </button>
+          </div>
+          <form onSubmit={handleSearch} className="mobile-search-form">
+            <Search className="search-icon-header" size={20} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search movies, TV shows, anime..."
+              autoFocus
+            />
+          </form>
+        </div>
+      )}
 
       <main className="main-content">
         <Routes>

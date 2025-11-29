@@ -18,25 +18,23 @@ body {
   flex-direction: column;
 }
 
-/* ============ HEADER STYLES ============ */
+/* ============ HEADER STYLES - MODERN DESIGN ============ */
 .app-header {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  padding: 12px 0;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(10px);
 }
 
 .header-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
 .logo-section {
@@ -44,6 +42,7 @@ body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .logo-icon {
@@ -55,7 +54,6 @@ body {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  white-space: nowrap;
 }
 
 .header-nav {
@@ -79,17 +77,17 @@ body {
 
 .search-icon-header {
   position: absolute;
-  left: 12px;
+  left: 14px;
   color: #cbd5e1;
   pointer-events: none;
-  flex-shrink: 0;
+  z-index: 1;
 }
 
 .search-input-header {
   width: 100%;
-  padding: 10px 12px 10px 38px;
+  padding: 10px 14px 10px 42px;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   color: #fff;
@@ -103,8 +101,32 @@ body {
 
 .search-input-header:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Mobile Search Toggle Button */
+.search-toggle-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.search-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Mobile Search Overlay */
+.mobile-search-overlay {
+  display: none;
 }
 
 /* ============ AUTH UI IN HEADER ============ */
@@ -112,10 +134,10 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 10px 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   color: #fff;
   font-size: 14px;
@@ -127,7 +149,7 @@ body {
 }
 
 .login-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
 }
@@ -141,9 +163,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 10px 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   color: #fff;
@@ -151,7 +173,6 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  white-space: nowrap;
 }
 
 .user-menu-button:hover {
@@ -196,110 +217,6 @@ body {
 
 .user-menu-dropdown button:not(:last-child) {
   border-bottom: 1px solid #334155;
-}
-
-/* ============ RESPONSIVE HEADER ============ */
-@media (max-width: 1024px) {
-  .header-nav {
-    max-width: 500px;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-header {
-    padding: 10px 0;
-  }
-
-  .header-content {
-    padding: 0 16px;
-    gap: 12px;
-  }
-
-  .logo-section {
-    gap: 8px;
-  }
-
-  .logo-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .app-header h1 {
-    font-size: 20px;
-  }
-
-  .header-nav {
-    gap: 12px;
-    max-width: none;
-  }
-
-  .search-input-header {
-    padding: 8px 10px 8px 36px;
-    font-size: 13px;
-  }
-
-  .login-button,
-  .user-menu-button {
-    padding: 8px 12px;
-    font-size: 13px;
-    gap: 6px;
-  }
-
-  .user-menu-button span {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-header {
-    padding: 8px 0;
-  }
-
-  .header-content {
-    padding: 0 12px;
-    gap: 8px;
-  }
-
-  .logo-section {
-    gap: 6px;
-  }
-
-  .logo-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .app-header h1 {
-    font-size: 16px;
-  }
-
-  .search-input-header {
-    padding: 7px 8px 7px 32px;
-    font-size: 12px;
-  }
-
-  .search-icon-header {
-    width: 16px;
-    height: 16px;
-    left: 10px;
-  }
-
-  .login-button,
-  .user-menu-button {
-    padding: 7px 10px;
-    font-size: 12px;
-  }
-
-  .login-button span,
-  .user-menu-button span {
-    display: none;
-  }
-
-  .user-menu-dropdown {
-    min-width: 180px;
-  }
 }
 
 /* ============ MAIN CONTENT ============ */
@@ -1333,5 +1250,145 @@ body {
   .history-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 12px;
+  }
+}
+
+
+/* ============ RESPONSIVE - MOBILE FIRST ============ */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 10px 16px;
+    gap: 12px;
+  }
+
+  .logo-section {
+    gap: 8px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .app-header h1 {
+    font-size: 18px;
+  }
+
+  /* Hide desktop search, show toggle button */
+  .search-container-header {
+    display: none;
+  }
+
+  .search-toggle-btn {
+    display: flex;
+  }
+
+  /* Show mobile search overlay when active */
+  .mobile-search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 200;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .mobile-search-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mobile-search-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .mobile-search-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-search-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .mobile-search-form {
+    position: relative;
+  }
+
+  .mobile-search-form .search-icon-header {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .mobile-search-form input {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    background: #1e293b;
+    color: #fff;
+    font-size: 16px;
+  }
+
+  .mobile-search-form input:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  .login-button,
+  .user-menu-button {
+    padding: 10px;
+    gap: 0;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+  }
+
+  .login-button span,
+  .user-menu-button span {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 8px 12px;
+  }
+
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .app-header h1 {
+    font-size: 16px;
+  }
+
+  .search-toggle-btn,
+  .login-button,
+  .user-menu-button {
+    width: 36px;
+    height: 36px;
   }
 }
