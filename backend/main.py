@@ -7,7 +7,12 @@ from dotenv import load_dotenv
 app = FastAPI()
 load_dotenv()
 
-origins = ["http://localhost:3000"]
+origins = [
+    "http://localhost:3000",
+    "https://mediamingle.onrender.com",  # Add your frontend URL here
+    "*"  # Temporary for testing, remove in production
+]
+
 
 app.add_middleware(
     CORSMiddleware,

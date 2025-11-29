@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import config from './config';
+
 import './App.css';
 import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Info, Github, Twitter, Instagram } from 'lucide-react';
 
@@ -30,9 +32,9 @@ function App() {
   const loadTrending = (type) => {
     setLoading(true);
     const urls = {
-      movies: 'http://localhost:8000/trending-movies',
-      tv: 'http://localhost:8000/trending-tv',
-      anime: 'http://localhost:8000/trending-anime'
+      movies: '${config.API_BASE_URL}/trending-movies',
+      tv: '${config.API_BASE_URL}/trending-tv',
+      anime: '${config.API_BASE_URL}/trending-anime'
     };
 
     fetch(urls[type])
@@ -57,9 +59,9 @@ function App() {
 
     setLoading(true);
     const urls = {
-      movies: `http://localhost:8000/search-movies?query=${encodeURIComponent(search)}`,
-      tv: `http://localhost:8000/search-tv?query=${encodeURIComponent(search)}`,
-      anime: `http://localhost:8000/search-anime?query=${encodeURIComponent(search)}`
+      movies: `${config.API_BASE_URL}/search-movies?query=${encodeURIComponent(search)}`,
+      tv: `${config.API_BASE_URL}/search-tv?query=${encodeURIComponent(search)}`,
+      anime: `${config.API_BASE_URL}/search-anime?query=${encodeURIComponent(search)}`
     };
 
     const res = await fetch(urls[activeTab]);
@@ -77,7 +79,7 @@ function App() {
     setSelectedMood(mood);
     setSelectedGenre("");
     setLoading(true);
-    const url = `http://localhost:8000/recommend?mood=${mood}&content_type=${activeTab}`;
+    const url = `${config.API_BASE_URL}/recommend?mood=${mood}&content_type=${activeTab}`;
     
     const res = await fetch(url);
     const data = await res.json();
