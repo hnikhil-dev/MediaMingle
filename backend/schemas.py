@@ -59,3 +59,30 @@ class HistoryResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+# Rating Schemas
+class RatingCreate(BaseModel):
+    content_type: str
+    content_id: str
+    title: str
+    poster_url: Optional[str] = None
+    rating: float
+    review: Optional[str] = None
+
+class RatingUpdate(BaseModel):
+    rating: float
+    review: Optional[str] = None
+
+class RatingResponse(BaseModel):
+    id: int
+    user_id: int
+    content_type: str
+    content_id: str
+    title: str
+    poster_url: Optional[str]
+    rating: float
+    review: Optional[str]
+    rated_at: datetime
+
+    class Config:
+        from_attributes = True

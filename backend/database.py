@@ -26,6 +26,7 @@ class User(Base):
     
     favorites = relationship("Favorite", back_populates="user")
     history = relationship("History", back_populates="user")
+    ratings = relationship("Rating", back_populates="user")
 
 # Favorite Model
 class Favorite(Base):
@@ -64,3 +65,19 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+# Rating Model
+class Rating(Base):
+    __tablename__ = "ratings"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    content_type = Column(String)  # movies, tv, anime
+    content_id = Column(String)
+    title = Column(String)
+    poster_url = Column(String, nullable=True)
+    rating = Column(Float)  # 1-10 scale
+    review = Column(String, nullable=True)  # Optional text review
+    rated_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="ratings")

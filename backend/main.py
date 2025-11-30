@@ -7,8 +7,8 @@ import requests
 import os
 import time
 
-from database import get_db, init_db, User, Favorite, History
-from schemas import UserCreate, UserLogin, UserResponse, Token, FavoriteCreate, FavoriteResponse, HistoryCreate, HistoryResponse
+from database import get_db, init_db, User, Favorite, History, Rating
+from schemas import UserCreate, UserLogin, UserResponse, Token, FavoriteCreate, FavoriteResponse, HistoryCreate, HistoryResponse, RatingCreate, RatingUpdate, RatingResponse
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 app = FastAPI()
@@ -370,6 +370,180 @@ def delete_history_item(
             status_code=500,
             detail=f"Failed to delete history item: {str(e)}"
         )
+
+# ============ RATING ENDPOINTS ============
+
+# Add or update rating
+@app.post("/ratings", response_model=RatingResponse)
+def add_or_update_rating(
+    rating_data: RatingCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check if rating already exists
+    existing_rating = db.query(Rating).filter(
+        Rating.user_id == current_user.id,
+        Rating.content_type == rating_data.content_type,
+        Rating.content_id == rating_data.content_id
+    ).first()
+    
+    if existing_rating:
+        # Update existing rating
+        existing_rating.rating = rating_data.rating
+        existing_rating.review = rating_data.review
+        existing_rating.rated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing_rating)
+        return existing_rating
+    
+    # Create new rating
+    new_rating = Rating(
+        user_id=current_user.id,
+        content_type=rating_data.content_type,
+        content_id=rating_data.content_id,
+        title=rating_data.title,
+        poster_url=rating_data.poster_url,
+        rating=rating_data.rating,
+        review=rating_data.review
+    )
+    
+    db.add(new_rating)
+    db.commit()
+    db.refresh(new_rating)
+    return new_rating
+
+# Get all user ratings
+@app.get("/ratings", response_model=List[RatingResponse])
+def get_ratings(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    content_type: str = Query(None),
+    min_rating: float = Query(None),
+    sort_by: str = Query("rated_at")  # rated_at, rating, title
+):
+    query = db.query(Rating).filter(Rating.user_id == current_user.id)
+    
+    # Filter by content type
+    if content_type:
+        query = query.filter(Rating.content_type == content_type)
+    
+    # Filter by minimum rating
+    if min_rating:
+        query = query.filter(Rating.rating >= min_rating)
+    
+    # Sort
+    if sort_by == "rating":
+        query = query.order_by(Rating.rating.desc())
+    elif sort_by == "title":
+        query = query.order_by(Rating.title)
+    else:
+        query = query.order_by(Rating.rated_at.desc())
+    
+    return query.all()
+
+# Get rating for specific content
+@app.get("/ratings/{content_type}/{content_id}")
+def get_rating(
+    content_type: str,
+    content_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    rating = db.query(Rating).filter(
+        Rating.user_id == current_user.id,
+        Rating.content_type == content_type,
+        Rating.content_id == content_id
+    ).first()
+    
+    if rating:
+        return {
+            "has_rating": True,
+            "rating": rating.rating,
+            "review": rating.review,
+            "rated_at": rating.rated_at,
+            "rating_id": rating.id
+        }
+    return {"has_rating": False}
+
+# Update rating
+@app.put("/ratings/{rating_id}", response_model=RatingResponse)
+def update_rating(
+    rating_id: int,
+    rating_update: RatingUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    rating = db.query(Rating).filter(
+        Rating.id == rating_id,
+        Rating.user_id == current_user.id
+    ).first()
+    
+    if not rating:
+        raise HTTPException(status_code=404, detail="Rating not found")
+    
+    rating.rating = rating_update.rating
+    rating.review = rating_update.review
+    rating.rated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(rating)
+    return rating
+
+# Delete rating
+@app.delete("/ratings/{rating_id}")
+def delete_rating(
+    rating_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    rating = db.query(Rating).filter(
+        Rating.id == rating_id,
+        Rating.user_id == current_user.id
+    ).first()
+    
+    if not rating:
+        raise HTTPException(status_code=404, detail="Rating not found")
+    
+    db.delete(rating)
+    db.commit()
+    return {"message": "Rating deleted successfully"}
+
+# Get rating statistics
+@app.get("/ratings/stats")
+def get_rating_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    ratings = db.query(Rating).filter(Rating.user_id == current_user.id).all()
+    
+    if not ratings:
+        return {
+            "total_ratings": 0,
+            "average_rating": 0,
+            "highest_rated": None,
+            "lowest_rated": None
+        }
+    
+    ratings_list = [r.rating for r in ratings]
+    average = sum(ratings_list) / len(ratings_list)
+    
+    highest = max(ratings, key=lambda x: x.rating)
+    lowest = min(ratings, key=lambda x: x.rating)
+    
+    return {
+        "total_ratings": len(ratings),
+        "average_rating": round(average, 1),
+        "highest_rated": {
+            "title": highest.title,
+            "rating": highest.rating,
+            "poster_url": highest.poster_url
+        },
+        "lowest_rated": {
+            "title": lowest.title,
+            "rating": lowest.rating,
+            "poster_url": lowest.poster_url
+        }
+    }
 
 # ============ DETAIL ENDPOINTS ============
 
