@@ -235,7 +235,9 @@ function DetailPage({ contentType }) {
   const overview = contentType === 'anime' ? content.synopsis : content.overview;
   const backdrop = contentType === 'anime'
     ? content.images?.jpg?.large_image_url
-    : `https://image.tmdb.org/t/p/original${content.backdrop_path || content.poster_path}`;
+    : (content.backdrop_path || content.poster_path)
+      ? `https://image.tmdb.org/t/p/original${content.backdrop_path || content.poster_path}`
+      : null;
   const poster = contentType === 'anime'
     ? content.images?.jpg?.image_url
     : `https://image.tmdb.org/t/p/w500${content.poster_path}`;
@@ -259,15 +261,26 @@ function DetailPage({ contentType }) {
         <span>Back</span>
       </button>
 
-      <div className="detail-hero" style={{ backgroundImage: `url(${backdrop})` }}>
+      <div className="detail-hero" style={{ backgroundImage: backdrop ? `url(${backdrop})` : 'none' }}>
         <div className="detail-hero-overlay"></div>
         <div className="detail-hero-content">
           <div className="detail-poster">
             {poster ? (
-              <img src={poster} alt={title} />
-            ) : (
-              <div className="detail-poster-placeholder">No Image</div>
-            )}
+              <img src={poster} alt={title} onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }} />
+            ) : null}
+            <div className="detail-poster-placeholder" style={{ display: poster ? 'none' : 'flex' }}>
+              <div className="poster-placeholder-content">
+                <Film size={64} className="poster-placeholder-icon" />
+                <h3 className="poster-placeholder-title">{title}</h3>
+                <span className="poster-placeholder-subtitle">No Poster Available</span>
+                <div className="poster-placeholder-decoration">
+                  <Sparkles size={20} />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="detail-info">
