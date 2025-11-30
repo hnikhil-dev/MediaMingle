@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users, Copy, Share2, ExternalLink, Check, RotateCw } from 'lucide-react';
+import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users, Copy, Share2, ExternalLink, Check, RotateCw, User, Sparkles } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import ContextMenu from './ContextMenu';
 import config from './config';
