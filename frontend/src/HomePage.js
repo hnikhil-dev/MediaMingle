@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock, SlidersHorizontal } from 'lucide-react';
+import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock, SlidersHorizontal, Eye, Copy, Share2, ExternalLink, ArrowLeft, RotateCw, HeartOff } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import config from './config';
 import axios from 'axios';
 import FilterPanel from './FilterPanel';
+import ContextMenu from './ContextMenu';
+
 
 function HomePage() {
   const navigate = useNavigate();
@@ -20,10 +22,11 @@ function HomePage() {
   const [retrying, setRetrying] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [favorites, setFavorites] = useState([]);
-  const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [history, setHistory] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const { isAuthenticated } = useAuth();
 
@@ -367,6 +370,133 @@ function HomePage() {
     }
   }, [isAuthenticated]);
 
+  // Handle right-click on media card
+  const handleContextMenu = (e, item) => {
+    e.preventDefault();
+
+    const contentId = activeTab === 'anime' ? item.mal_id : item.id;
+    const favoriteKey = `${activeTab}-${contentId}`;
+    const isFavorite = favoriteIds.has(favoriteKey);
+    const favoriteItem = favorites.find(fav =>
+      fav.content_type === activeTab && fav.content_id === String(contentId)
+    );
+
+    const actions = [
+      {
+        label: 'View Details',
+        icon: Eye,
+        onClick: (item) => {
+          const id = activeTab === 'anime' ? item.mal_id : item.id;
+          navigate(`/${activeTab}/${id}`);
+        }
+      },
+      {
+        label: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+        icon: isFavorite ? HeartOff : Heart,
+        onClick: (item) => {
+          if (isAuthenticated) {
+            toggleFavorite(item, isFavorite, favoriteItem?.id);
+          } else {
+            alert('Please sign in to use favorites');
+          }
+        },
+        disabled: !isAuthenticated
+      },
+      { divider: true },
+      {
+        label: 'Copy Link',
+        icon: Copy,
+        onClick: (item) => {
+          const id = activeTab === 'anime' ? item.mal_id : item.id;
+          const url = `${window.location.origin}/${activeTab}/${id}`;
+          navigator.clipboard.writeText(url);
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        },
+        shortcut: 'Ctrl+C'
+      },
+      {
+        label: 'Share',
+        icon: Share2,
+        onClick: (item) => {
+          const id = activeTab === 'anime' ? item.mal_id : item.id;
+          const url = `${window.location.origin}/${activeTab}/${id}`;
+          const title = item.title || item.name;
+
+          if (navigator.share) {
+            navigator.share({
+              title: title,
+              url: url
+            }).catch(() => { });
+          } else {
+            navigator.clipboard.writeText(url);
+            alert('Link copied to clipboard!');
+          }
+        }
+      },
+      {
+        label: 'Open in New Tab',
+        icon: ExternalLink,
+        onClick: (item) => {
+          const id = activeTab === 'anime' ? item.mal_id : item.id;
+          window.open(`/${activeTab}/${id}`, '_blank');
+        },
+        shortcut: 'Ctrl+Click'
+      }
+    ];
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      actions: actions,
+      item: item
+    });
+  };
+
+  // Handle right-click on page (general)
+  const handlePageContextMenu = (e) => {
+    // Only show if not on a card
+    if (!e.target.closest('.media-card')) {
+      e.preventDefault();
+
+      const actions = [
+        {
+          label: 'Go Back',
+          icon: ArrowLeft,
+          onClick: () => navigate(-1),
+          shortcut: 'Alt+←'
+        },
+        {
+          label: 'Refresh Page',
+          icon: RotateCw,
+          onClick: () => window.location.reload(),
+          shortcut: 'F5'
+        },
+        { divider: true },
+        {
+          label: 'Search',
+          icon: Search,
+          onClick: () => document.querySelector('.search-input-header')?.focus(),
+          shortcut: 'Ctrl+K'
+        }
+      ];
+
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        actions: actions
+      });
+    }
+  };
+
+  // Add page context menu listener
+  useEffect(() => {
+    document.addEventListener('contextmenu', handlePageContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handlePageContextMenu);
+    };
+  }, []);
+
   const renderCard = (item, index, cardActiveTab) => {
     const contentId = cardActiveTab === 'anime' ? item.mal_id : item.id;
     const favoriteKey = `${cardActiveTab}-${contentId}`;
@@ -377,7 +507,7 @@ function HomePage() {
 
     if (cardActiveTab === 'anime') {
       return (
-        <div className="media-card" key={item.mal_id} style={{ animationDelay: `${index * 0.05}s` }}>
+        <div className="media-card" key={item.mal_id} style={{ animationDelay: `${index * 0.05}s` }} onContextMenu={(e) => handleContextMenu(e, item)}>
           <div className="card-image-wrapper" onClick={() => navigate(`/anime/${item.mal_id}`)}>
             {item.images?.jpg?.image_url ? (
               <img src={item.images.jpg.image_url} alt={item.title} loading="lazy" />
@@ -417,7 +547,7 @@ function HomePage() {
       );
     } else {
       return (
-        <div className="media-card" key={item.id} style={{ animationDelay: `${index * 0.05}s` }}>
+        <div className="media-card" key={item.mal_id} style={{ animationDelay: `${index * 0.05}s` }} onContextMenu={(e) => handleContextMenu(e, item)}>
           <div className="card-image-wrapper" onClick={() => navigate(`/${cardActiveTab}/${item.id}`)}>
             {item.poster_path ? (
               <img
@@ -738,6 +868,21 @@ function HomePage() {
           contentType={activeTab}
           onApplyFilters={handleApplyFilters}
           onClose={() => setShowFilters(false)}
+        />
+      )},
+      {copiedLink && (
+        <div className="toast-notification">
+          <Check size={16} />
+          <span>Link copied to clipboard!</span>
+        </div>
+      )},
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          actions={contextMenu.actions}
+          item={contextMenu.item}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </>

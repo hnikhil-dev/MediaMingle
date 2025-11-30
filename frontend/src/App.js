@@ -11,6 +11,7 @@ import MusicPage from './MusicPage';
 import BooksPage from './BooksPage';
 import GamesPage from './GamesPage';
 import ProfilePage from './ProfilePage';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 function AppContent() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -21,6 +22,7 @@ function AppContent() {
   const [searchHistory, setSearchHistory] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  useKeyboardShortcuts();
 
   // Load search history from localStorage
   useEffect(() => {
@@ -235,8 +237,8 @@ function AppContent() {
           <div className="footer-section">
             <h4>Connect With Us</h4>
             <div className="social-links">
-              <a href="#github" aria-label="GitHub"><Github size={24} /></a>
-              <a href="#twitter" aria-label="Twitter"><Twitter size={24} /></a>
+              <a href="https://github.com/hnikhil-dev" aria-label="GitHub"><Github size={24} /></a>
+              <a href="https://x.com/NikhilDabhade17" aria-label="Twitter"><Twitter size={24} /></a>
               <a href="#instagram" aria-label="Instagram"><Instagram size={24} /></a>
             </div>
           </div>

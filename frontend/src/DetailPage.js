@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users, Copy, Share2, ExternalLink, Check, RotateCw } from 'lucide-react';
 import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users } from 'lucide-react';
 import { useAuth } from './AuthContext';
+import ContextMenu from './ContextMenu';
 import config from './config';
 import axios from 'axios';
 import './DetailPage.css';
@@ -14,6 +16,9 @@ function DetailPage({ contentType }) {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [trailer, setTrailer] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
 
   useEffect(() => {
     loadContentDetails();
@@ -30,7 +35,7 @@ function DetailPage({ contentType }) {
 
       const response = await fetch(urls[contentType]);
       const data = await response.json();
-      
+
       if (contentType === 'anime') {
         setContent(data.data);
         // Find trailer from anime data
@@ -65,8 +70,8 @@ function DetailPage({ contentType }) {
         content_type: contentType,
         content_id: String(id),
         title: contentType === 'anime' ? data.data?.title : (data.title || data.name),
-        poster_url: contentType === 'anime' 
-          ? data.data?.images?.jpg?.image_url 
+        poster_url: contentType === 'anime'
+          ? data.data?.images?.jpg?.image_url
           : `https://image.tmdb.org/t/p/w300${data.poster_path}`
       };
 
@@ -82,7 +87,7 @@ function DetailPage({ contentType }) {
     try {
       const response = await axios.get(
         `${config.API_BASE_URL}/favorites/check/${contentType}/${id}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }}
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       setIsFavorite(response.data.is_favorite);
     } catch (error) {
@@ -97,7 +102,7 @@ function DetailPage({ contentType }) {
       if (isFavorite) {
         const response = await axios.get(
           `${config.API_BASE_URL}/favorites/check/${contentType}/${id}`,
-          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }}
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
         await axios.delete(`${config.API_BASE_URL}/favorites/${response.data.favorite_id}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -108,11 +113,11 @@ function DetailPage({ contentType }) {
           content_type: contentType,
           content_id: String(id),
           title: contentType === 'anime' ? content.title : (content.title || content.name),
-          poster_url: contentType === 'anime' 
-            ? content.images?.jpg?.image_url 
+          poster_url: contentType === 'anime'
+            ? content.images?.jpg?.image_url
             : `https://image.tmdb.org/t/p/w300${content.poster_path}`
         };
-        
+
         await axios.post(`${config.API_BASE_URL}/favorites`, favoriteData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
@@ -125,7 +130,7 @@ function DetailPage({ contentType }) {
 
   if (loading) {
     return (
-      <div className="detail-page">
+      <div className="detail-page" onContextMenu={handleDetailContextMenu}>
         <div className="detail-loading">
           <div className="spinner"></div>
           <p>Loading details...</p>
@@ -136,7 +141,7 @@ function DetailPage({ contentType }) {
 
   if (!content) {
     return (
-      <div className="detail-page">
+      <div className="detail-page" onContextMenu={handleDetailContextMenu}>
         <div className="detail-error">
           <p>Content not found</p>
           <button onClick={() => navigate('/')}>Go Back</button>
@@ -145,8 +150,8 @@ function DetailPage({ contentType }) {
     );
   }
 
-  const backdropUrl = contentType === 'anime' 
-    ? content.images?.jpg?.large_image_url 
+  const backdropUrl = contentType === 'anime'
+    ? content.images?.jpg?.large_image_url
     : `https://image.tmdb.org/t/p/original${content.backdrop_path || content.poster_path}`;
 
   const posterUrl = contentType === 'anime'
@@ -154,25 +159,109 @@ function DetailPage({ contentType }) {
     : `https://image.tmdb.org/t/p/w500${content.poster_path}`;
 
   const title = contentType === 'anime' ? content.title : (content.title || content.name);
-  const releaseDate = contentType === 'anime' 
-    ? content.aired?.string 
+  const releaseDate = contentType === 'anime'
+    ? content.aired?.string
     : (content.release_date || content.first_air_date);
   const rating = contentType === 'anime' ? content.score : content.vote_average;
   const overview = contentType === 'anime' ? content.synopsis : content.overview;
-  const runtime = contentType === 'anime' 
-    ? `${content.episodes || '?'} episodes` 
+  const runtime = contentType === 'anime'
+    ? `${content.episodes || '?'} episodes`
     : content.runtime ? `${content.runtime} min` : content.episode_run_time?.[0] ? `${content.episode_run_time[0]} min` : 'N/A';
 
-  const cast = contentType === 'anime' 
-    ? [] 
+  const cast = contentType === 'anime'
+    ? []
     : (content.credits?.cast || []).slice(0, 10);
 
   const similar = contentType === 'anime'
     ? []
     : (content.similar?.results || []).slice(0, 6);
 
+  // Handle right-click on detail page
+  const handleDetailContextMenu = (e) => {
+    e.preventDefault();
+
+    const actions = [
+      {
+        label: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+        icon: isFavorite ? Heart : Heart,
+        onClick: () => {
+          if (isAuthenticated) {
+            toggleFavorite();
+          } else {
+            alert('Please sign in to use favorites');
+          }
+        },
+        disabled: !isAuthenticated
+      },
+      { divider: true },
+      {
+        label: 'Copy Link',
+        icon: Copy,
+        onClick: () => {
+          const url = window.location.href;
+          navigator.clipboard.writeText(url);
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        },
+        shortcut: 'Ctrl+C'
+      },
+      {
+        label: 'Share',
+        icon: Share2,
+        onClick: () => {
+          const url = window.location.href;
+          const title = content?.title || content?.name;
+
+          if (navigator.share) {
+            navigator.share({
+              title: title,
+              url: url
+            }).catch(() => { });
+          } else {
+            navigator.clipboard.writeText(url);
+            alert('Link copied to clipboard!');
+          }
+        }
+      },
+      {
+        label: 'Open in New Tab',
+        icon: ExternalLink,
+        onClick: () => {
+          window.open(window.location.href, '_blank');
+        }
+      },
+      { divider: true },
+      {
+        label: 'Go Back',
+        icon: ArrowLeft,
+        onClick: () => navigate(-1),
+        shortcut: 'Alt+←'
+      },
+      {
+        label: 'Refresh',
+        icon: RotateCw,
+        onClick: () => window.location.reload(),
+        shortcut: 'F5'
+      }
+    ];
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      actions: actions
+    });
+  };
+
+  // Add context menu listener
+  useEffect(() => {
+    document.addEventListener('contextmenu', handleDetailContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handleDetailContextMenu);
+    };
+  }, [isFavorite, isAuthenticated, content]);
+
   return (
-    <div className="detail-page">
+    <div className="detail-page" onContextMenu={handleDetailContextMenu}>
       <button className="back-button" onClick={() => navigate(-1)}>
         <ArrowLeft size={20} />
         Back
@@ -184,10 +273,10 @@ function DetailPage({ contentType }) {
           <div className="detail-poster">
             <img src={posterUrl} alt={title} />
           </div>
-          
+
           <div className="detail-info">
             <h1 className="detail-title">{title}</h1>
-            
+
             <div className="detail-meta">
               <span className="detail-rating">
                 <Star size={18} fill="#fbbf24" color="#fbbf24" />
@@ -215,7 +304,7 @@ function DetailPage({ contentType }) {
 
             <div className="detail-actions">
               {trailer && (
-                <a 
+                <a
                   href={`https://www.youtube.com/watch?v=${trailer.key}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -225,8 +314,8 @@ function DetailPage({ contentType }) {
                   Watch Trailer
                 </a>
               )}
-              
-              <button 
+
+              <button
                 className={`detail-btn secondary ${isFavorite ? 'active' : ''}`}
                 onClick={toggleFavorite}
                 disabled={!isAuthenticated}
@@ -249,8 +338,8 @@ function DetailPage({ contentType }) {
             {cast.map(person => (
               <div key={person.id} className="cast-card">
                 {person.profile_path ? (
-                  <img 
-                    src={`https://image.tmdb.org/t/p/w185${person.profile_path}`} 
+                  <img
+                    src={`https://image.tmdb.org/t/p/w185${person.profile_path}`}
                     alt={person.name}
                   />
                 ) : (
@@ -290,8 +379,8 @@ function DetailPage({ contentType }) {
           <h2 className="section-heading">Similar {contentType === 'movies' ? 'Movies' : 'Shows'}</h2>
           <div className="similar-grid">
             {similar.map(item => (
-              <div 
-                key={item.id} 
+              <div
+                key={item.id}
                 className="similar-card"
                 onClick={() => {
                   navigate(`/${contentType}/${item.id}`);
@@ -299,8 +388,8 @@ function DetailPage({ contentType }) {
                 }}
               >
                 {item.poster_path ? (
-                  <img 
-                    src={`https://image.tmdb.org/t/p/w300${item.poster_path}`} 
+                  <img
+                    src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
                     alt={item.title || item.name}
                   />
                 ) : (
@@ -310,6 +399,21 @@ function DetailPage({ contentType }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          actions={contextMenu.actions}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {copiedLink && (
+        <div className="toast-notification">
+          <Check size={16} />
+          <span>Link copied to clipboard!</span>
         </div>
       )}
     </div>
