@@ -332,7 +332,8 @@ async def delete_all_history(current_user: dict = Depends(get_current_user)):
         conn.close()
         return {"message": "All history cleared"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error clearing history: {str(e)}")  # For debugging
+        raise HTTPException(status_code=500, detail=f"Failed to clear history: {str(e)}")
 
 # Delete single history item
 @app.delete("/history/{history_id}")
@@ -351,17 +352,21 @@ async def delete_history_item(history_id: int, current_user: dict = Depends(get_
         if not history:
             cursor.close()
             conn.close()
-            raise HTTPException(status_code=404, detail="History item not found")
+            raise HTTPException(status_code=404, detail="History item not found or doesn't belong to you")
         
+        # Delete the history item
         cursor.execute('DELETE FROM watch_history WHERE id = ?', (history_id,))
         conn.commit()
         cursor.close()
         conn.close()
-        return {"message": "History item deleted"}
-    except HTTPException as he:
-        raise he
+        
+        return {"message": "History item deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error deleting history item: {str(e)}")  # For debugging
+        raise HTTPException(status_code=500, detail=f"Failed to delete history item: {str(e)}")
+
 
 # ============ DETAIL ENDPOINTS ============
 
