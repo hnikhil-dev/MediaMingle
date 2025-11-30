@@ -4,15 +4,19 @@ import './App.css';
 import { Search, Sparkles, User, LogOut, Heart, Github, Twitter, Instagram, X, Menu, Clock, Trash2 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import Auth from './Auth';
+import Sidebar from './Sidebar';
 import HomePage from './HomePage';
 import DetailPage from './DetailPage';
+import MusicPage from './MusicPage';
+import BooksPage from './BooksPage';
+import GamesPage from './GamesPage';
+import ProfilePage from './ProfilePage';
 
 function AppContent() {
   const { user, logout, isAuthenticated } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [search, setSearch] = useState("");
   const [searchHistory, setSearchHistory] = useState([]);
   const navigate = useNavigate();
@@ -24,14 +28,22 @@ function AppContent() {
     setSearchHistory(history);
   }, []);
 
+  // Check for auth query param
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('auth') === 'login') {
+      setShowAuth(true);
+    }
+  }, [location]);
+
   // Save search to history
   const saveSearchToHistory = (query) => {
     if (!query.trim()) return;
     
     let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-    history = history.filter(item => item !== query); // Remove duplicates
-    history.unshift(query); // Add to beginning
-    history = history.slice(0, 10); // Keep only 10 items
+    history = history.filter(item => item !== query);
+    history.unshift(query);
+    history = history.slice(0, 10);
     
     localStorage.setItem('searchHistory', JSON.stringify(history));
     setSearchHistory(history);
@@ -61,21 +73,9 @@ function AppContent() {
     setShowMobileSearch(false);
   };
 
-  const showMyFavorites = () => {
-    setShowUserMenu(false);
-    setShowSidebar(false);
-    navigate('/?favorites=true');
-  };
-
-  const handleLogout = () => {
-    logout();
-    setShowSidebar(false);
-    setShowUserMenu(false);
-  };
-
-  // Close sidebar when route changes
+  // Close sidebar/search when route changes
   useEffect(() => {
-    setShowSidebar(false);
+    setShowMobileSidebar(false);
     setShowMobileSearch(false);
   }, [location]);
 
@@ -83,6 +83,11 @@ function AppContent() {
     <div className="app-container">
       <header className="app-header">
         <div className="header-content">
+          {/* Mobile Hamburger */}
+          <button className="hamburger-btn" onClick={() => setShowMobileSidebar(true)}>
+            <Menu size={24} />
+          </button>
+
           <div className="logo-section" onClick={() => navigate('/')}>
             <Sparkles className="logo-icon" size={32} />
             <h1>MediaMingle</h1>
@@ -108,27 +113,11 @@ function AppContent() {
             </button>
           </nav>
 
-          {/* Desktop: User Menu */}
-          <div className="desktop-auth">
+          {/* Desktop: User Avatar */}
+          <div className="desktop-user-avatar">
             {isAuthenticated ? (
-              <div className="user-menu-container">
-                <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
-                  <User size={20} />
-                  <span>{user?.username}</span>
-                </button>
-                
-                {showUserMenu && (
-                  <div className="user-menu-dropdown">
-                    <button onClick={showMyFavorites}>
-                      <Heart size={18} />
-                      My Favorites
-                    </button>
-                    <button onClick={handleLogout}>
-                      <LogOut size={18} />
-                      Logout
-                    </button>
-                  </div>
-                )}
+              <div className="user-avatar" onClick={() => navigate('/profile')}>
+                <User size={20} />
               </div>
             ) : (
               <button className="login-button" onClick={() => setShowAuth(true)}>
@@ -137,15 +126,25 @@ function AppContent() {
               </button>
             )}
           </div>
-
-          {/* Mobile: Hamburger Menu */}
-          <button className="hamburger-btn" onClick={() => setShowSidebar(true)}>
-            <Menu size={24} />
-          </button>
         </div>
       </header>
 
-      {/* Mobile Search Overlay with History */}
+      {/* Desktop Sidebar */}
+      <div className="desktop-sidebar">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {showMobileSidebar && (
+        <>
+          <div className="sidebar-overlay" onClick={() => setShowMobileSidebar(false)}></div>
+          <div className="mobile-sidebar-container">
+            <Sidebar />
+          </div>
+        </>
+      )}
+
+      {/* Mobile Search Overlay */}
       {showMobileSearch && (
         <div className="mobile-search-overlay">
           <div className="mobile-search-container">
@@ -198,71 +197,18 @@ function AppContent() {
         </div>
       )}
 
-      {/* Mobile Sidebar */}
-      {showSidebar && (
-        <>
-          <div className="sidebar-overlay" onClick={() => setShowSidebar(false)}></div>
-          <div className="sidebar">
-            <div className="sidebar-header">
-              <div className="sidebar-profile">
-                <div className="sidebar-avatar">
-                  <User size={32} />
-                </div>
-                <div className="sidebar-user-info">
-                  {isAuthenticated ? (
-                    <>
-                      <h3>{user?.username}</h3>
-                      <p>{user?.email}</p>
-                    </>
-                  ) : (
-                    <h3>Guest User</h3>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <nav className="sidebar-nav">
-              {isAuthenticated ? (
-                <>
-                  <button onClick={() => navigate('/')} className="sidebar-item">
-                    <Sparkles size={20} />
-                    <span>Home</span>
-                  </button>
-                  <button onClick={showMyFavorites} className="sidebar-item">
-                    <Heart size={20} />
-                    <span>My Favorites</span>
-                  </button>
-                  <button onClick={handleLogout} className="sidebar-item logout">
-                    <LogOut size={20} />
-                    <span>Logout</span>
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => { setShowSidebar(false); setShowAuth(true); }} className="sidebar-item">
-                  <User size={20} />
-                  <span>Sign In</span>
-                </button>
-              )}
-            </nav>
-
-            <div className="sidebar-footer">
-              <p>© 2025 MediaMingle</p>
-              <div className="sidebar-social">
-                <a href="#github"><Github size={18} /></a>
-                <a href="#twitter"><Twitter size={18} /></a>
-                <a href="#instagram"><Instagram size={18} /></a>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      <main className="main-content">
+      <main className="main-content-with-sidebar">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/movies/:id" element={<DetailPage contentType="movies" />} />
           <Route path="/tv/:id" element={<DetailPage contentType="tv" />} />
           <Route path="/anime/:id" element={<DetailPage contentType="anime" />} />
+          <Route path="/music" element={<MusicPage />} />
+          <Route path="/books" element={<BooksPage />} />
+          <Route path="/games" element={<GamesPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/favorites" element={<HomePage />} />
+          <Route path="/history" element={<HomePage />} />
         </Routes>
       </main>
 
@@ -273,7 +219,7 @@ function AppContent() {
               <Sparkles size={28} />
               <h3>MediaMingle</h3>
             </div>
-            <p>Your personalized entertainment hub for movies, TV shows, and anime.</p>
+            <p>Your personalized entertainment hub for movies, TV shows, anime, and more.</p>
           </div>
           
           <div className="footer-section">
