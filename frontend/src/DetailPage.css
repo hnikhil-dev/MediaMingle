@@ -379,3 +379,70 @@ css
     font-size: 24px;
   }
 }
+
+/* Fix cast card images */
+.cast-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.cast-card img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #334155;
+}
+
+.cast-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #1e293b;
+  border: 3px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.cast-info {
+  text-align: center;
+  max-width: 120px;
+}
+
+.cast-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cast-character {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-cast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 20px;
+  padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .detail-cast-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
