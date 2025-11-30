@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock, SlidersHorizontal, Eye, Copy, Share2, ExternalLink, ArrowLeft, RotateCw, HeartOff, Check } from 'lucide-react';
+import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock, SlidersHorizontal, Eye, Copy, Share2, ExternalLink, ArrowLeft, RotateCw, HeartOff, Check, Trash2 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import config from './config';
 import axios from 'axios';
@@ -512,6 +512,38 @@ function HomePage() {
     }
   };
 
+  // Delete all history
+  const clearAllHistory = async () => {
+    if (!isAuthenticated) return;
+
+    const confirmed = window.confirm('Are you sure you want to clear all watch history? This cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await axios.delete(`${config.API_BASE_URL}/history/all`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setHistory([]);
+    } catch (error) {
+      console.error('Failed to clear history', error);
+      alert('Failed to clear history. Please try again.');
+    }
+  };
+
+  // Delete single history item
+  const deleteHistoryItem = async (historyId) => {
+    if (!isAuthenticated) return;
+
+    try {
+      await axios.delete(`${config.API_BASE_URL}/history/${historyId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setHistory(history.filter(h => h.id !== historyId));
+    } catch (error) {
+      console.error('Failed to delete history item', error);
+      alert('Failed to delete item. Please try again.');
+    }
+  };
 
   const toggleFavorite = async (item, isFavorite, favoriteId) => {
     if (!isAuthenticated) return;
@@ -668,6 +700,13 @@ function HomePage() {
           onClick: () => navigate(`/${hist.content_type}/${hist.content_id}`)
         },
         {
+          label: 'Remove from History',
+          icon: Trash2,
+          onClick: () => deleteHistoryItem(hist.id),
+          danger: true
+        },
+        { divider: true },
+        {
           label: 'Copy Link',
           icon: Copy,
           onClick: () => {
@@ -711,6 +750,14 @@ function HomePage() {
           <div className="card-overlay">
             <button className="card-action-btn play-btn">
               <Play size={20} fill="white" />
+            </button>
+            <button 
+              className="card-action-btn delete-btn" 
+              onClick={(e) => {
+              e.stopPropagation();
+              deleteHistoryItem(hist.id);
+            }}>
+              <Trash2 size={18} color="#fff" />
             </button>
           </div>
           <div className="card-quick-info">
@@ -948,16 +995,23 @@ function HomePage() {
       )}
 
       <div className="content-section">
-        <h2 className="section-title">
-          {showFavorites ? 'My Favorites' :
-            showHistory ? 'Watch History' :
-              searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
-                activeFilters ? 'Filtered Results' :
-                  selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` :
-                    selectedGenre ? selectedGenre :
-                      `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
-        </h2>
-
+        <div className="section-header">
+          <h2 className="section-title">
+            {showFavorites ? 'My Favorites' :
+              showHistory ? 'Watch History' :
+                searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
+                  activeFilters ? 'Filtered Results' :
+                    selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` :
+                      selectedGenre ? selectedGenre :
+                        `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
+          </h2>
+          {showHistory && history.length > 0 && (
+            <button className="clear-history-btn" onClick={clearAllHistory}>
+              <Trash2 size={18} />
+              <span>Clear All History</span>
+            </button>
+          )}
+        </div>
 
         {loading && !retrying ? (
           <div className="loading-grid">
