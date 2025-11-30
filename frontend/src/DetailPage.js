@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users, Copy, Share2, ExternalLink, Check, RotateCw, User, Sparkles, Film } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import ContextMenu from './ContextMenu';
-import StarRating from './StarRating';
-import RatingModal from './RatingModal';
 import config from './config';
 import axios from 'axios';
 import './DetailPage.css';
@@ -13,15 +11,13 @@ function DetailPage({ contentType }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [trailer, setTrailer] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [userRating, setUserRating] = useState(null);
-  const [showRatingModal, setShowRatingModal] = useState(false);
-
   const filterIncompleteContent = (items, type) => {
     return items.filter(item => {
       if (type === 'anime') {
@@ -39,60 +35,13 @@ function DetailPage({ contentType }) {
 
   useEffect(() => {
     loadContentDetails();
-    if (isAuthenticated) {
-      loadUserRating();
-    }
-  }, [id, contentType, isAuthenticated]);
+  }, [id, contentType]);
 
-  const loadUserRating = async () => {
-    if (!isAuthenticated) return;
-    
-    try {
-      const response = await axios.get(
-        `${config.API_BASE_URL}/ratings/${contentType}/${id}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      if (response.data.has_rating) {
-        setUserRating(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load rating', error);
-    }
-  };
-
-  const handleSubmitRating = async (ratingData) => {
-    try {
-      const payload = {
-        content_type: contentType,
-        content_id: String(id),
-        title: content.title || content.name,
-        poster_url: contentType === 'anime' 
-          ? content.images?.jpg?.image_url 
-          : `https://image.tmdb.org/t/p/w500${content.poster_path}`,
-        rating: ratingData.rating,
-        review: ratingData.review
-      };
-
-      await axios.post(
-        `${config.API_BASE_URL}/ratings`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-
-      loadUserRating();
-    } catch (error) {
-      console.error('Failed to submit rating', error);
-      alert('Failed to submit rating. Please try again.');
-    }
-  };
-
+  // Context menu listener
   useEffect(() => {
     const handleContextMenu = (e) => {
       e.preventDefault();
+
       const actions = [
         {
           label: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
@@ -124,8 +73,12 @@ function DetailPage({ contentType }) {
           onClick: () => {
             const url = window.location.href;
             const title = content?.title || content?.name;
+
             if (navigator.share) {
-              navigator.share({ title: title, url: url }).catch(() => {});
+              navigator.share({
+                title: title,
+                url: url
+              }).catch(() => { });
             } else {
               navigator.clipboard.writeText(url);
               alert('Link copied to clipboard!');
@@ -230,9 +183,7 @@ function DetailPage({ contentType }) {
     try {
       const response = await axios.get(
         `${config.API_BASE_URL}/favorites/check/${contentType}/${id}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       setIsFavorite(response.data.is_favorite);
     } catch (error) {
@@ -247,9 +198,7 @@ function DetailPage({ contentType }) {
       if (isFavorite) {
         const response = await axios.get(
           `${config.API_BASE_URL}/favorites/check/${contentType}/${id}`,
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          }
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
 
         await axios.delete(`${config.API_BASE_URL}/favorites/${response.data.favorite_id}`, {
@@ -277,85 +226,96 @@ function DetailPage({ contentType }) {
   };
 
   if (loading) {
-    return <div className="detail-loading">Loading...</div>;
+    return (
+      <div className="detail-page">
+        <div className="detail-loading">Loading details...</div>
+      </div>
+    );
   }
 
   if (!content) {
-    return <div className="detail-error">Content not found</div>;
+    return (
+      <div className="detail-page">
+        <div className="detail-error">Content not found</div>
+      </div>
+    );
   }
 
-  const backdropUrl = contentType === 'anime'
+  const title = contentType === 'anime' ? content.title : (content.title || content.name);
+  const year = contentType === 'anime'
+    ? content.year
+    : (content.release_date || content.first_air_date)?.split('-')[0];
+  const rating = contentType === 'anime' ? content.score : content.vote_average?.toFixed(1);
+  const overview = contentType === 'anime' ? content.synopsis : content.overview;
+  const backdrop = contentType === 'anime'
     ? content.images?.jpg?.large_image_url
-    : `https://image.tmdb.org/t/p/original${content.backdrop_path}`;
-
-  const posterUrl = contentType === 'anime'
+    : (content.backdrop_path || content.poster_path)
+      ? `https://image.tmdb.org/t/p/original${content.backdrop_path || content.poster_path}`
+      : null;
+  const poster = contentType === 'anime'
     ? content.images?.jpg?.image_url
     : `https://image.tmdb.org/t/p/w500${content.poster_path}`;
 
-  const title = content.title || content.name;
-  const overview = contentType === 'anime' ? content.synopsis : content.overview;
-  const rating = contentType === 'anime' ? content.score : content.vote_average;
-
   const cast = contentType === 'anime'
-    ? []
-    : (content.credits?.cast || []).slice(0, 12);
+    ? (content.characters?.slice(0, 6).map(char => ({
+      name: char.character?.name,
+      character: char.role,
+      profile_path: char.character?.images?.jpg?.image_url
+    })) || [])
+    : (content.credits?.cast?.slice(0, 6) || []);
 
-  const similar = contentType === 'anime'
-    ? []
-    : filterIncompleteContent(content.similar?.results || [], contentType);
+  const similarRaw = contentType === 'anime'
+    ? (content.recommendations || [])
+    : (content.similar?.results || []);
+
+  const similar = filterIncompleteContent(similarRaw, contentType).slice(0, 6);
 
   return (
     <div className="detail-page">
       <button className="back-button" onClick={() => navigate(-1)}>
         <ArrowLeft size={20} />
-        Back
+        <span>Back</span>
       </button>
 
-      <div className="detail-hero" style={{ backgroundImage: `url(${backdropUrl})` }}>
+      <div className="detail-hero" style={{ backgroundImage: backdrop ? `url(${backdrop})` : 'none' }}>
         <div className="detail-hero-overlay"></div>
         <div className="detail-hero-content">
           <div className="detail-poster">
-            {posterUrl ? (
-              <img src={posterUrl} alt={title} />
-            ) : (
-              <div className="detail-poster-placeholder">
-                <div className="poster-placeholder-content">
-                  <Film className="poster-placeholder-icon" size={64} />
-                  <h3 className="poster-placeholder-title">{title}</h3>
-                  <span className="poster-placeholder-subtitle">No Poster Available</span>
+            {poster ? (
+              <img src={poster} alt={title} onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }} />
+            ) : null}
+            <div className="detail-poster-placeholder" style={{ display: poster ? 'none' : 'flex' }}>
+              <div className="poster-placeholder-content">
+                <Film size={64} className="poster-placeholder-icon" />
+                <h3 className="poster-placeholder-title">{title}</h3>
+                <span className="poster-placeholder-subtitle">No Poster Available</span>
+                <div className="poster-placeholder-decoration">
+                  <Sparkles size={20} />
                 </div>
-                <Sparkles className="poster-placeholder-decoration" size={32} />
               </div>
-            )}
+            </div>
           </div>
 
           <div className="detail-info">
             <h1 className="detail-title">{title}</h1>
 
             <div className="detail-meta">
-              {contentType === 'anime' && content.year && (
-                <div className="detail-meta-item">
-                  <Calendar size={18} />
-                  {content.year}
-                </div>
-              )}
-              {contentType !== 'anime' && content.release_date && (
-                <div className="detail-meta-item">
-                  <Calendar size={18} />
-                  {new Date(content.release_date || content.first_air_date).getFullYear()}
-                </div>
-              )}
+              <span className="detail-meta-item">
+                <Calendar size={16} />
+                {year || 'TBA'}
+              </span>
+              <span className="detail-meta-item">
+                <Star size={16} fill="#fbbf24" color="#fbbf24" />
+                {rating || 'N/A'}
+              </span>
               {contentType === 'anime' && content.episodes && (
-                <div className="detail-meta-item">
-                  <Clock size={18} />
-                  {content.episodes} Episodes
-                </div>
-              )}
-              {contentType !== 'anime' && content.runtime && (
-                <div className="detail-meta-item">
-                  <Clock size={18} />
-                  {content.runtime} min
-                </div>
+                <span className="detail-meta-item">
+                  <Clock size={16} />
+                  {content.episodes} episodes
+                </span>
               )}
             </div>
 
@@ -376,67 +336,10 @@ function DetailPage({ contentType }) {
                 onClick={toggleFavorite}
                 disabled={!isAuthenticated}
               >
-                <Heart size={20} fill={isFavorite ? '#f87171' : 'none'} />
-                {isFavorite ? 'In Favorites' : 'Add to Favorites'}
-              </button>
-              <button 
-                className="detail-btn rate-btn"
-                onClick={() => {
-                  if (isAuthenticated) {
-                    setShowRatingModal(true);
-                  } else {
-                    alert('Please sign in to rate content');
-                  }
-                }}
-              >
-                <Star size={20} fill={userRating ? '#fbbf24' : 'none'} />
-                {userRating ? 'Update Rating' : 'Rate This'}
+                <Heart size={18} fill={isFavorite ? '#f87171' : 'none'} />
+                {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
               </button>
             </div>
-
-            {/* Ratings Comparison */}
-            <div className="ratings-comparison">
-              <div className="rating-box">
-                <span className="rating-label">Community Rating</span>
-                <div className="rating-value">
-                  <Star size={24} fill="#fbbf24" stroke="#f59e0b" />
-                  <span>{rating ? rating.toFixed(1) : 'N/A'} / 10</span>
-                </div>
-              </div>
-              {userRating && (
-                <div className="rating-box user-rating-box">
-                  <span className="rating-label">Your Rating</span>
-                  <div className="rating-value">
-                    <Star size={24} fill="#8b5cf6" stroke="#7c3aed" />
-                    <span>{userRating.rating.toFixed(1)} / 10</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* User Rating Display */}
-            {userRating && (
-              <div className="user-rating-section">
-                <h3>Your Rating</h3>
-                <div className="user-rating-display">
-                  <StarRating
-                    rating={userRating.rating}
-                    size={28}
-                    maxRating={10}
-                    readonly={true}
-                  />
-                  {userRating.review && (
-                    <p className="user-review">"{userRating.review}"</p>
-                  )}
-                  <button 
-                    className="edit-rating-btn"
-                    onClick={() => setShowRatingModal(true)}
-                  >
-                    Edit Rating
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -444,15 +347,15 @@ function DetailPage({ contentType }) {
       {cast.length > 0 && (
         <div className="detail-section">
           <h2 className="detail-section-title">
-            <Users size={28} />
+            <Users size={24} />
             Cast
           </h2>
           <div className="detail-cast-grid">
-            {cast.map((person) => (
-              <div key={person.id} className="cast-card">
-                {person.profile_path ? (
+            {cast.map((person, index) => (
+              <div key={index} className="cast-card">
+                {(person.profile_path || person.profile_path) ? (
                   <img
-                    src={`https://image.tmdb.org/t/p/w200${person.profile_path}`}
+                    src={contentType === 'anime' ? person.profile_path : `https://image.tmdb.org/t/p/w185${person.profile_path}`}
                     alt={person.name}
                   />
                 ) : (
@@ -473,30 +376,37 @@ function DetailPage({ contentType }) {
       {similar.length > 0 && (
         <div className="detail-section">
           <h2 className="detail-section-title">
-            <Sparkles size={28} />
-            Similar {contentType === 'movies' ? 'Movies' : 'TV Shows'}
+            <Sparkles size={24} />
+            You May Also Like
           </h2>
           <div className="detail-similar-grid">
-            {similar.map((item) => (
-              <div
-                key={item.id}
-                className="similar-card"
-                onClick={() => navigate(`/${contentType}/${item.id}`)}
-              >
-                {item.poster_path ? (
-                  <img
-                    src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
-                    alt={item.title || item.name}
-                  />
-                ) : (
-                  <div className="similar-placeholder">
-                    <Film size={48} />
-                    <span className="similar-placeholder-text">No Poster</span>
-                  </div>
-                )}
-                <p className="similar-title">{item.title || item.name}</p>
-              </div>
-            ))}
+            {similar.map((item, index) => {
+              const itemId = contentType === 'anime' ? item.entry?.mal_id : item.id;
+              const itemTitle = contentType === 'anime'
+                ? (item.entry?.title || item.title)
+                : (item.title || item.name);
+              const itemPoster = contentType === 'anime'
+                ? item.entry?.images?.jpg?.image_url
+                : (item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null);
+
+              return (
+                <div
+                  key={index}
+                  className="similar-card"
+                  onClick={() => navigate(`/${contentType}/${itemId}`)}
+                >
+                  {itemPoster ? (
+                    <img src={itemPoster} alt={itemTitle} />
+                  ) : (
+                    <div className="similar-placeholder">
+                      <Film size={48} />
+                      <span className="similar-placeholder-text">{itemTitle}</span>
+                    </div>
+                  )}
+                  <p className="similar-title">{itemTitle || 'Unknown Title'}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -510,17 +420,12 @@ function DetailPage({ contentType }) {
         />
       )}
 
-      <RatingModal
-        isOpen={showRatingModal}
-        onClose={() => setShowRatingModal(false)}
-        onSubmit={handleSubmitRating}
-        contentData={{
-          title: title,
-          poster: posterUrl,
-          type: contentType
-        }}
-        existingRating={userRating}
-      />
+      {copiedLink && (
+        <div className="toast-notification">
+          <Check size={16} />
+          <span>Link copied to clipboard!</span>
+        </div>
+      )}
     </div>
   );
 }

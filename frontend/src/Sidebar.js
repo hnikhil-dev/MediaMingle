@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ContextMenu from './ContextMenu';
-import { Film, Tv, TrendingUp, Music, BookOpen, Gamepad2, User, Heart, Clock, Star, LogOut, Home, Copy, ExternalLink } from 'lucide-react';
+import { Film, Tv, TrendingUp, Music, BookOpen, Gamepad2, User, Heart, Clock, LogOut, Home, Copy, ExternalLink, Check } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import './Sidebar.css';
 
@@ -28,7 +28,6 @@ function Sidebar() {
   const userNavItems = isAuthenticated ? [
     { path: '/profile', icon: User, label: 'Profile', color: '#64748b' },
     { path: '/favorites', icon: Heart, label: 'My Favorites', color: '#f87171' },
-    { path: '/my-ratings', icon: Star, label: 'My Ratings', color: '#fbbf24' },
     { path: '/history', icon: Clock, label: 'Watch History', color: '#94a3b8' },
   ] : [];
 
@@ -58,13 +57,15 @@ function Sidebar() {
     navigate('/');
   };
 
+  // Handle right-click on sidebar items
   const handleItemContextMenu = (e, item) => {
     e.preventDefault();
+
     const actions = [
       {
         label: 'Open in New Tab',
         icon: ExternalLink,
-        onClick: () => {
+        onClick: (menuItem) => {
           const fullPath = `${window.location.origin}${item.path}`;
           window.open(fullPath, '_blank');
         }
@@ -72,7 +73,7 @@ function Sidebar() {
       {
         label: 'Copy Link',
         icon: Copy,
-        onClick: () => {
+        onClick: (menuItem) => {
           const fullPath = `${window.location.origin}${item.path}`;
           navigator.clipboard.writeText(fullPath);
           setCopiedLink(true);
@@ -90,80 +91,95 @@ function Sidebar() {
   };
 
   return (
-    <>
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h2 className="sidebar-logo">MediaMingle</h2>
-        </div>
-
-        <div className="sidebar-content">
-          <nav className="sidebar-nav">
-            <div className="sidebar-section">
-              <span className="sidebar-section-title">BROWSE</span>
-              {mainNavItems.map((item) => (
-                <div
+    <div className="sidebar">
+      <div className="sidebar-content">
+        <nav className="sidebar-nav">
+          <div className="sidebar-section">
+            <p className="sidebar-section-title">Browse</p>
+            {mainNavItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <button
                   key={item.path}
                   className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
                   onClick={() => handleNavigation(item.path)}
                   onContextMenu={(e) => handleItemContextMenu(e, item)}
                   style={{ '--item-color': item.color }}
                 >
-                  <item.icon size={20} />
+                  <Icon size={20} />
                   <span>{item.label}</span>
-                </div>
-              ))}
-            </div>
+                </button>
+              );
+            })}
+          </div>
 
-            <div className="sidebar-section">
-              <span className="sidebar-section-title">DISCOVER</span>
-              {contentNavItems.map((item) => (
-                <div
+          <div className="sidebar-section">
+            <p className="sidebar-section-title">Discover</p>
+            {contentNavItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <button
                   key={item.path}
-                  className="sidebar-item disabled"
+                  className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
+                  onClick={() => handleNavigation(item.path)}
+                  onContextMenu={(e) => handleItemContextMenu(e, item)}
                   style={{ '--item-color': item.color }}
                 >
-                  <item.icon size={20} />
+                  <Icon size={20} />
                   <span>{item.label}</span>
                   {item.badge && <span className="sidebar-badge">{item.badge}</span>}
-                </div>
-              ))}
-            </div>
+                </button>
+              );
+            })}
+          </div>
 
-            {isAuthenticated && (
-              <div className="sidebar-section">
-                <span className="sidebar-section-title">LIBRARY</span>
-                {userNavItems.map((item) => (
-                  <div
+          {isAuthenticated && (
+            <div className="sidebar-section">
+              <p className="sidebar-section-title">Library</p>
+              {userNavItems.map(item => {
+                const Icon = item.icon;
+                return (
+                  <button
                     key={item.path}
                     className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
                     onClick={() => handleNavigation(item.path)}
                     onContextMenu={(e) => handleItemContextMenu(e, item)}
                     style={{ '--item-color': item.color }}
                   >
-                    <item.icon size={20} />
+                    <Icon size={20} />
                     <span>{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </nav>
-        </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </nav>
+      </div>
 
-        {isAuthenticated && (
-          <div className="sidebar-footer">
+      <div className="sidebar-footer">
+        {isAuthenticated ? (
+          <>
             <div className="sidebar-user">
               <div className="sidebar-user-avatar">
                 <User size={20} />
               </div>
               <div className="sidebar-user-info">
-                <span className="sidebar-user-name">{user?.username}</span>
-                <span className="sidebar-user-email">{user?.email}</span>
+                <p className="sidebar-user-name">{user?.username}</p>
+                <p className="sidebar-user-email">{user?.email}</p>
               </div>
             </div>
             <button className="sidebar-logout" onClick={handleLogout}>
               <LogOut size={18} />
             </button>
-          </div>
+          </>
+        ) : (
+          <button
+            className="sidebar-login-btn"
+            onClick={() => navigate('/?auth=login')}
+          >
+            <User size={18} />
+            <span>Sign In</span>
+          </button>
         )}
       </div>
 
@@ -172,10 +188,18 @@ function Sidebar() {
           x={contextMenu.x}
           y={contextMenu.y}
           actions={contextMenu.actions}
+          item={contextMenu.item}
           onClose={() => setContextMenu(null)}
         />
       )}
-    </>
+
+      {copiedLink && (
+        <div className="toast-notification">
+          <Check size={16} />
+          <span>Link copied to clipboard!</span>
+        </div>
+      )}
+    </div>
   );
 }
 
