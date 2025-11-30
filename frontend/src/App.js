@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
-import { Search, Sparkles, User, LogOut, Heart, Github, Twitter, Instagram, X } from 'lucide-react';
+import { Search, Sparkles, User, LogOut, Heart, Github, Twitter, Instagram, X, Menu, Clock, Trash2 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import Auth from './Auth';
 import HomePage from './HomePage';
@@ -12,21 +12,72 @@ function AppContent() {
   const [showAuth, setShowAuth] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [search, setSearch] = useState("");
+  const [searchHistory, setSearchHistory] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // Load search history from localStorage
+  useEffect(() => {
+    const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    setSearchHistory(history);
+  }, []);
+
+  // Save search to history
+  const saveSearchToHistory = (query) => {
+    if (!query.trim()) return;
+    
+    let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    history = history.filter(item => item !== query); // Remove duplicates
+    history.unshift(query); // Add to beginning
+    history = history.slice(0, 10); // Keep only 10 items
+    
+    localStorage.setItem('searchHistory', JSON.stringify(history));
+    setSearchHistory(history);
+  };
+
+  // Clear search history
+  const clearSearchHistory = () => {
+    localStorage.removeItem('searchHistory');
+    setSearchHistory([]);
+  };
+
+  // Handle search submit
   const handleSearch = (e) => {
     e.preventDefault();
     if (!search.trim()) return;
+    
+    saveSearchToHistory(search);
     navigate(`/?search=${encodeURIComponent(search)}`);
     setShowMobileSearch(false);
     setSearch("");
   };
 
+  // Handle search history click
+  const handleHistoryClick = (query) => {
+    setSearch(query);
+    navigate(`/?search=${encodeURIComponent(query)}`);
+    setShowMobileSearch(false);
+  };
+
   const showMyFavorites = () => {
     setShowUserMenu(false);
+    setShowSidebar(false);
     navigate('/?favorites=true');
   };
+
+  const handleLogout = () => {
+    logout();
+    setShowSidebar(false);
+    setShowUserMenu(false);
+  };
+
+  // Close sidebar when route changes
+  useEffect(() => {
+    setShowSidebar(false);
+    setShowMobileSearch(false);
+  }, [location]);
 
   return (
     <div className="app-container">
@@ -51,60 +102,159 @@ function AppContent() {
               </form>
             </div>
 
+            {/* Mobile: Search Button */}
             <button className="search-toggle-btn" onClick={() => setShowMobileSearch(true)}>
               <Search size={20} />
             </button>
           </nav>
 
-          {isAuthenticated ? (
-            <div className="user-menu-container">
-              <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
-                <User size={20} />
-                <span>{user?.username}</span>
+          {/* Desktop: User Menu */}
+          <div className="desktop-auth">
+            {isAuthenticated ? (
+              <div className="user-menu-container">
+                <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
+                  <User size={20} />
+                  <span>{user?.username}</span>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="user-menu-dropdown">
+                    <button onClick={showMyFavorites}>
+                      <Heart size={18} />
+                      My Favorites
+                    </button>
+                    <button onClick={handleLogout}>
+                      <LogOut size={18} />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button className="login-button" onClick={() => setShowAuth(true)}>
+                <User size={18} />
+                <span>Sign In</span>
               </button>
-              
-              {showUserMenu && (
-                <div className="user-menu-dropdown">
-                  <button onClick={showMyFavorites}>
-                    <Heart size={18} />
-                    My Favorites
-                  </button>
-                  <button onClick={() => { logout(); setShowUserMenu(false); }}>
-                    <LogOut size={18} />
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button className="login-button" onClick={() => setShowAuth(true)}>
-              <User size={18} />
-              <span>Sign In</span>
-            </button>
-          )}
+            )}
+          </div>
+
+          {/* Mobile: Hamburger Menu */}
+          <button className="hamburger-btn" onClick={() => setShowSidebar(true)}>
+            <Menu size={24} />
+          </button>
         </div>
       </header>
 
-      {/* Mobile Search Overlay */}
+      {/* Mobile Search Overlay with History */}
       {showMobileSearch && (
         <div className="mobile-search-overlay">
-          <div className="mobile-search-header">
-            <h2 className="mobile-search-title">Search</h2>
-            <button className="mobile-search-close" onClick={() => setShowMobileSearch(false)}>
-              <X size={24} />
-            </button>
+          <div className="mobile-search-container">
+            <div className="mobile-search-header">
+              <h2 className="mobile-search-title">Search</h2>
+              <button className="mobile-search-close" onClick={() => setShowMobileSearch(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSearch} className="mobile-search-form">
+              <Search className="search-icon-header" size={20} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search movies, TV shows, anime..."
+                autoFocus
+              />
+            </form>
+
+            {/* Search History */}
+            {searchHistory.length > 0 && (
+              <div className="search-history">
+                <div className="search-history-header">
+                  <h3>
+                    <Clock size={16} />
+                    Recent Searches
+                  </h3>
+                  <button onClick={clearSearchHistory} className="clear-history-btn">
+                    <Trash2 size={14} />
+                    Clear
+                  </button>
+                </div>
+                <div className="search-history-list">
+                  {searchHistory.map((query, index) => (
+                    <div 
+                      key={index} 
+                      className="search-history-item"
+                      onClick={() => handleHistoryClick(query)}
+                    >
+                      <Clock size={14} />
+                      <span>{query}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <form onSubmit={handleSearch} className="mobile-search-form">
-            <Search className="search-icon-header" size={20} />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search movies, TV shows, anime..."
-              autoFocus
-            />
-          </form>
         </div>
+      )}
+
+      {/* Mobile Sidebar */}
+      {showSidebar && (
+        <>
+          <div className="sidebar-overlay" onClick={() => setShowSidebar(false)}></div>
+          <div className="sidebar">
+            <div className="sidebar-header">
+              <div className="sidebar-profile">
+                <div className="sidebar-avatar">
+                  <User size={32} />
+                </div>
+                <div className="sidebar-user-info">
+                  {isAuthenticated ? (
+                    <>
+                      <h3>{user?.username}</h3>
+                      <p>{user?.email}</p>
+                    </>
+                  ) : (
+                    <h3>Guest User</h3>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <nav className="sidebar-nav">
+              {isAuthenticated ? (
+                <>
+                  <button onClick={() => navigate('/')} className="sidebar-item">
+                    <Sparkles size={20} />
+                    <span>Home</span>
+                  </button>
+                  <button onClick={showMyFavorites} className="sidebar-item">
+                    <Heart size={20} />
+                    <span>My Favorites</span>
+                  </button>
+                  <button onClick={handleLogout} className="sidebar-item logout">
+                    <LogOut size={20} />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => { setShowSidebar(false); setShowAuth(true); }} className="sidebar-item">
+                  <User size={20} />
+                  <span>Sign In</span>
+                </button>
+              )}
+            </nav>
+
+            <div className="sidebar-footer">
+              <p>© 2025 MediaMingle</p>
+              <div className="sidebar-social">
+                <a href="#github"><Github size={18} /></a>
+                <a href="#twitter"><Twitter size={18} /></a>
+                <a href="#instagram"><Instagram size={18} /></a>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       <main className="main-content">
