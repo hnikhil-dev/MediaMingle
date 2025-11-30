@@ -45,6 +45,8 @@ function Sidebar() {
       navigate('/?tab=anime');
     } else if (path === '/favorites') {
       navigate('/?favorites=true');
+    } else if (path === '/history') {
+      navigate('/?history=true');
     } else {
       navigate(path);
     }
@@ -58,7 +60,7 @@ function Sidebar() {
   // Handle right-click on sidebar items
   const handleItemContextMenu = (e, item) => {
     e.preventDefault();
-    
+
     const actions = [
       {
         label: 'Open in New Tab',
@@ -171,7 +173,7 @@ function Sidebar() {
             </button>
           </>
         ) : (
-          <button 
+          <button
             className="sidebar-login-btn"
             onClick={() => navigate('/?auth=login')}
           >
