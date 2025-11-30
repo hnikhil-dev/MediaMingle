@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users, Copy, Share2, ExternalLink, Check, RotateCw, User, Sparkles } from 'lucide-react';
+import { Play, Star, Heart, Clock, Calendar, ArrowLeft, Users, Copy, Share2, ExternalLink, Check, RotateCw, User, Sparkles, Film } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import ContextMenu from './ContextMenu';
 import config from './config';
@@ -11,7 +11,7 @@ function DetailPage({ contentType }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -27,7 +27,7 @@ function DetailPage({ contentType }) {
   useEffect(() => {
     const handleContextMenu = (e) => {
       e.preventDefault();
-      
+
       const actions = [
         {
           label: isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
@@ -59,12 +59,12 @@ function DetailPage({ contentType }) {
           onClick: () => {
             const url = window.location.href;
             const title = content?.title || content?.name;
-            
+
             if (navigator.share) {
               navigator.share({
                 title: title,
                 url: url
-              }).catch(() => {});
+              }).catch(() => { });
             } else {
               navigator.clipboard.writeText(url);
               alert('Link copied to clipboard!');
@@ -104,7 +104,7 @@ function DetailPage({ contentType }) {
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [isFavorite, isAuthenticated, content]);
+  }, [isFavorite, isAuthenticated, content, navigate]);
 
   const loadContentDetails = async () => {
     setLoading(true);
@@ -152,8 +152,8 @@ function DetailPage({ contentType }) {
         content_type: contentType,
         content_id: String(id),
         title: contentType === 'anime' ? data.data?.title : (data.title || data.name),
-        poster_url: contentType === 'anime' 
-          ? data.data?.images?.jpg?.image_url 
+        poster_url: contentType === 'anime'
+          ? data.data?.images?.jpg?.image_url
           : `https://image.tmdb.org/t/p/w300${data.poster_path}`
       };
 
@@ -196,8 +196,8 @@ function DetailPage({ contentType }) {
           content_type: contentType,
           content_id: String(id),
           title: contentType === 'anime' ? content.title : (content.title || content.name),
-          poster_url: contentType === 'anime' 
-            ? content.images?.jpg?.image_url 
+          poster_url: contentType === 'anime'
+            ? content.images?.jpg?.image_url
             : `https://image.tmdb.org/t/p/w300${content.poster_path}`
         };
 
@@ -228,27 +228,27 @@ function DetailPage({ contentType }) {
   }
 
   const title = contentType === 'anime' ? content.title : (content.title || content.name);
-  const year = contentType === 'anime' 
-    ? content.year 
+  const year = contentType === 'anime'
+    ? content.year
     : (content.release_date || content.first_air_date)?.split('-')[0];
   const rating = contentType === 'anime' ? content.score : content.vote_average?.toFixed(1);
   const overview = contentType === 'anime' ? content.synopsis : content.overview;
-  const backdrop = contentType === 'anime' 
-    ? content.images?.jpg?.large_image_url 
+  const backdrop = contentType === 'anime'
+    ? content.images?.jpg?.large_image_url
     : `https://image.tmdb.org/t/p/original${content.backdrop_path || content.poster_path}`;
-  const poster = contentType === 'anime' 
-    ? content.images?.jpg?.image_url 
+  const poster = contentType === 'anime'
+    ? content.images?.jpg?.image_url
     : `https://image.tmdb.org/t/p/w500${content.poster_path}`;
 
-  const cast = contentType === 'anime' 
+  const cast = contentType === 'anime'
     ? (content.characters?.slice(0, 6).map(char => ({
-        name: char.character?.name,
-        character: char.role,
-        profile_path: char.character?.images?.jpg?.image_url
-      })) || [])
+      name: char.character?.name,
+      character: char.role,
+      profile_path: char.character?.images?.jpg?.image_url
+    })) || [])
     : (content.credits?.cast?.slice(0, 6) || []);
 
-  const similar = contentType === 'anime' 
+  const similar = contentType === 'anime'
     ? (content.recommendations?.slice(0, 6) || [])
     : (content.similar?.results?.slice(0, 6) || []);
 
@@ -272,20 +272,16 @@ function DetailPage({ contentType }) {
 
           <div className="detail-info">
             <h1 className="detail-title">{title}</h1>
-            
+
             <div className="detail-meta">
-              {year && (
-                <span className="detail-meta-item">
-                  <Calendar size={16} />
-                  {year}
-                </span>
-              )}
-              {rating && (
-                <span className="detail-meta-item">
-                  <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                  {rating}
-                </span>
-              )}
+              <span className="detail-meta-item">
+                <Calendar size={16} />
+                {year || 'TBA'}
+              </span>
+              <span className="detail-meta-item">
+                <Star size={16} fill="#fbbf24" color="#fbbf24" />
+                {rating || 'N/A'}
+              </span>
               {contentType === 'anime' && content.episodes && (
                 <span className="detail-meta-item">
                   <Clock size={16} />
@@ -298,7 +294,7 @@ function DetailPage({ contentType }) {
 
             <div className="detail-actions">
               {trailer && (
-                <button 
+                <button
                   className="detail-btn primary"
                   onClick={() => window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank')}
                 >
@@ -306,7 +302,7 @@ function DetailPage({ contentType }) {
                   Watch Trailer
                 </button>
               )}
-              <button 
+              <button
                 className={`detail-btn secondary ${isFavorite ? 'active' : ''}`}
                 onClick={toggleFavorite}
                 disabled={!isAuthenticated}
@@ -329,9 +325,9 @@ function DetailPage({ contentType }) {
             {cast.map((person, index) => (
               <div key={index} className="cast-card">
                 {(person.profile_path || person.profile_path) ? (
-                  <img 
-                    src={contentType === 'anime' ? person.profile_path : `https://image.tmdb.org/t/p/w185${person.profile_path}`} 
-                    alt={person.name} 
+                  <img
+                    src={contentType === 'anime' ? person.profile_path : `https://image.tmdb.org/t/p/w185${person.profile_path}`}
+                    alt={person.name}
                   />
                 ) : (
                   <div className="cast-placeholder">
@@ -357,25 +353,28 @@ function DetailPage({ contentType }) {
           <div className="detail-similar-grid">
             {similar.map((item, index) => {
               const itemId = contentType === 'anime' ? item.entry?.mal_id : item.id;
-              const itemTitle = contentType === 'anime' 
+              const itemTitle = contentType === 'anime'
                 ? (item.entry?.title || item.title)
                 : (item.title || item.name);
-              const itemPoster = contentType === 'anime' 
-                ? item.entry?.images?.jpg?.image_url 
-                : `https://image.tmdb.org/t/p/w300${item.poster_path}`;
+              const itemPoster = contentType === 'anime'
+                ? item.entry?.images?.jpg?.image_url
+                : (item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null);
 
               return (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="similar-card"
                   onClick={() => navigate(`/${contentType}/${itemId}`)}
                 >
                   {itemPoster ? (
                     <img src={itemPoster} alt={itemTitle} />
                   ) : (
-                    <div className="similar-placeholder">No Image</div>
+                    <div className="similar-placeholder">
+                      <Film size={48} />
+                      <span className="similar-placeholder-text">{itemTitle}</span>
+                    </div>
                   )}
-                  <p className="similar-title">{itemTitle}</p>
+                  <p className="similar-title">{itemTitle || 'Unknown Title'}</p>
                 </div>
               );
             })}
