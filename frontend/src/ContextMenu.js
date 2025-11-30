@@ -27,7 +27,6 @@ function ContextMenu({ x, y, onClose, actions, item }) {
     };
   }, [onClose]);
 
-  // Adjust position to keep menu in viewport
   const adjustPosition = () => {
     if (!menuRef.current) return { x, y };
 

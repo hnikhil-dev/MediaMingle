@@ -89,15 +89,6 @@
   margin: 6px 8px;
 }
 
-/* Prevent text selection while right-clicking */
-.no-select {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Add to media cards */
 .media-card {
   -webkit-user-select: none;
   -moz-user-select: none;
