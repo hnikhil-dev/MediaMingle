@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock } from 'lucide-react';
+import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import config from './config';
 import axios from 'axios';
+import FilterPanel from './FilterPanel';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ function HomePage() {
   const [favorites, setFavorites] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [history, setHistory] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState(null);
 
   const { isAuthenticated } = useAuth();
 
@@ -61,6 +64,7 @@ function HomePage() {
     
     setLoading(true);
     setShowFavorites(false);
+    setActiveFilters(null);
     
     const urls = {
       movies: `${config.API_BASE_URL}/search-movies?query=${encodeURIComponent(query)}`,
@@ -136,9 +140,88 @@ function HomePage() {
     }
   };
 
+  // Load content with filters
+  const loadWithFilters = async (filters) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let url;
+      let params = new URLSearchParams({
+        year_min: filters.yearMin,
+        year_max: filters.yearMax,
+        rating_min: filters.ratingMin,
+        sort_by: filters.sortBy,
+        page: 1
+      });
+
+      if (activeTab === 'anime') {
+        url = `${config.API_BASE_URL}/discover-anime?${params}`;
+        if (filters.season) {
+          url += `&season=${filters.season}`;
+        }
+        if (filters.genres && filters.genres.length > 0) {
+          url += `&genre=${filters.genres[0]}`; // AniList takes one genre at a time
+        }
+      } else {
+        if (filters.language) {
+          params.append('language', filters.language);
+        }
+        if (filters.genres) {
+          params.append('with_genres', filters.genres);
+        }
+        
+        url = activeTab === 'movies' 
+          ? `${config.API_BASE_URL}/discover-movies?${params}`
+          : `${config.API_BASE_URL}/discover-tv?${params}`;
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (activeTab === 'anime') {
+        const results = data.data?.Page?.media || [];
+        // Convert AniList format to match our existing format
+        const convertedResults = results.map(item => ({
+          mal_id: item.id,
+          title: item.title?.english || item.title?.romaji,
+          images: {
+            jpg: {
+              image_url: item.coverImage?.large || item.coverImage?.extraLarge
+            }
+          },
+          score: item.averageScore ? item.averageScore / 10 : null,
+          year: item.seasonYear,
+          episodes: item.episodes,
+          type: item.format,
+          synopsis: item.description
+        }));
+        setContent(convertedResults);
+      } else {
+        setContent(data.results || []);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Filter error:', error);
+      setError('Failed to load content with filters');
+      setLoading(false);
+    }
+  };
+
+  const handleApplyFilters = (filters) => {
+    setActiveFilters(filters);
+    setSelectedMood("");
+    setSelectedGenre("");
+    setShowMoodSelector(false);
+    navigate('/'); // Clear search params
+    loadWithFilters(filters);
+  };
+
   const handleMoodSelect = async (mood) => {
     setSelectedMood(mood);
     setSelectedGenre("");
+    setActiveFilters(null);
     setLoading(true);
     const url = `${config.API_BASE_URL}/recommend?mood=${mood}&content_type=${activeTab}`;
     
@@ -158,6 +241,7 @@ function HomePage() {
   const handleGenreSelect = (genre) => {
     setSelectedGenre(genre);
     setSelectedMood("");
+    setActiveFilters(null);
   };
 
   const handleTabChange = (tab) => {
@@ -166,7 +250,8 @@ function HomePage() {
     setSelectedGenre("");
     setShowMoodSelector(false);
     setShowFavorites(false);
-    navigate('/'); // Clear URL params
+    setActiveFilters(null);
+    navigate('/');
     loadTrending(tab);
   };
 
@@ -483,13 +568,24 @@ function HomePage() {
 
       {!showFavorites && (
         <div className="controls-section">
-          <button 
-            className={`mood-toggle-button ${showMoodSelector ? 'active' : ''}`}
-            onClick={() => setShowMoodSelector(!showMoodSelector)}
-          >
-            <Sparkles size={18} />
-            Mood Recommendations
-          </button>
+          <div className="controls-row">
+            <button 
+              className={`mood-toggle-button ${showMoodSelector ? 'active' : ''}`}
+              onClick={() => setShowMoodSelector(!showMoodSelector)}
+            >
+              <Sparkles size={18} />
+              Mood Recommendations
+            </button>
+
+            <button 
+              className={`filter-toggle-button ${activeFilters ? 'active' : ''}`}
+              onClick={() => setShowFilters(true)}
+            >
+              <SlidersHorizontal size={18} />
+              Advanced Filters
+              {activeFilters && <span className="filter-badge">Active</span>}
+            </button>
+          </div>
 
           <div className="genre-filters">
             {genres[activeTab].map(genre => (
@@ -548,6 +644,7 @@ function HomePage() {
         <h2 className="section-title">
           {showFavorites ? 'My Favorites' :
            searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
+           activeFilters ? 'Filtered Results' :
            selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` : 
            selectedGenre ? selectedGenre :
            `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
@@ -593,6 +690,14 @@ function HomePage() {
           </div>
         )}
       </div>
+
+      {showFilters && (
+        <FilterPanel
+          contentType={activeTab}
+          onApplyFilters={handleApplyFilters}
+          onClose={() => setShowFilters(false)}
+        />
+      )}
     </>
   );
 }

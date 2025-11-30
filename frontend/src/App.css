@@ -1416,3 +1416,60 @@ body {
     gap: 12px;
   }
 }
+
+/* ============ FILTER BUTTON STYLES ============ */
+.controls-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border: 2px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: fit-content;
+  position: relative;
+}
+
+.filter-toggle-button:hover,
+.filter-toggle-button.active {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+}
+
+.filter-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  padding: 4px 8px;
+  background: #ef4444;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+@media (max-width: 768px) {
+  .controls-row {
+    width: 100%;
+  }
+
+  .mood-toggle-button,
+  .filter-toggle-button {
+    flex: 1;
+    min-width: 0;
+  }
+}
