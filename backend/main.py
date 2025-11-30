@@ -311,62 +311,65 @@ def get_history(
     
     return history
 
-@app.delete("/history")
-def clear_history(
+# Delete all history for a user - FIXED FOR SQLALCHEMY
+@app.delete("/history/all")
+def delete_all_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    db.query(History).filter(History.user_id == current_user.id).delete()
-    db.commit()
-    return {"message": "History cleared"}
-
-# Delete all history for a user
-@app.delete("/history/all")
-async def delete_all_history(current_user: dict = Depends(get_current_user)):
     try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM watch_history WHERE user_id = ?', (current_user['id'],))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return {"message": "All history cleared"}
+        # Delete all history items for this user using SQLAlchemy
+        deleted_count = db.query(History).filter(
+            History.user_id == current_user.id
+        ).delete()
+        
+        db.commit()
+        
+        return {
+            "message": f"All history cleared ({deleted_count} items deleted)"
+        }
     except Exception as e:
-        print(f"Error clearing history: {str(e)}")  # For debugging
-        raise HTTPException(status_code=500, detail=f"Failed to clear history: {str(e)}")
-
-# Delete single history item
-@app.delete("/history/{history_id}")
-async def delete_history_item(history_id: int, current_user: dict = Depends(get_current_user)):
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        # Verify the history item belongs to the user
-        cursor.execute(
-            'SELECT * FROM watch_history WHERE id = ? AND user_id = ?',
-            (history_id, current_user['id'])
+        db.rollback()
+        print(f"Error clearing history: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear history: {str(e)}"
         )
-        history = cursor.fetchone()
+
+# Delete single history item - FIXED FOR SQLALCHEMY
+@app.delete("/history/{history_id}")
+def delete_history_item(
+    history_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Find the history item
+        history_item = db.query(History).filter(
+            History.id == history_id,
+            History.user_id == current_user.id
+        ).first()
         
-        if not history:
-            cursor.close()
-            conn.close()
-            raise HTTPException(status_code=404, detail="History item not found or doesn't belong to you")
+        if not history_item:
+            raise HTTPException(
+                status_code=404,
+                detail="History item not found or doesn't belong to you"
+            )
         
-        # Delete the history item
-        cursor.execute('DELETE FROM watch_history WHERE id = ?', (history_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        # Delete the item
+        db.delete(history_item)
+        db.commit()
         
         return {"message": "History item deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error deleting history item: {str(e)}")  # For debugging
-        raise HTTPException(status_code=500, detail=f"Failed to delete history item: {str(e)}")
-
+        db.rollback()
+        print(f"Error deleting history item: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete history item: {str(e)}"
+        )
 
 # ============ DETAIL ENDPOINTS ============
 
