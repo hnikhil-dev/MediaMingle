@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Film, Tv, Sparkles, TrendingUp, Heart, Smile, Frown, Zap, Ghost, Brain, Coffee, Star, Play, Clock } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import config from './config';
@@ -7,8 +7,8 @@ import axios from 'axios';
 
 function HomePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [content, setContent] = useState([]);
-  const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("movies");
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedMood, setSelectedMood] = useState("");
@@ -37,6 +37,52 @@ function HomePage() {
     movies: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Romance", "Thriller"],
     tv: ["Drama", "Comedy", "Action", "Mystery", "Sci-Fi", "Reality"],
     anime: ["Shounen", "Slice of Life", "Action", "Romance", "Psychological", "Comedy"]
+  };
+
+  // Check URL params for search or favorites
+  useEffect(() => {
+    const searchQuery = searchParams.get('search');
+    const showFavs = searchParams.get('favorites');
+
+    if (showFavs === 'true') {
+      setShowFavorites(true);
+    } else if (searchQuery) {
+      handleSearchFromURL(searchQuery);
+    } else {
+      setShowFavorites(false);
+      if (content.length === 0) {
+        loadTrending(activeTab);
+      }
+    }
+  }, [searchParams]);
+
+  const handleSearchFromURL = async (query) => {
+    if (!query.trim()) return;
+    
+    setLoading(true);
+    setShowFavorites(false);
+    
+    const urls = {
+      movies: `${config.API_BASE_URL}/search-movies?query=${encodeURIComponent(query)}`,
+      tv: `${config.API_BASE_URL}/search-tv?query=${encodeURIComponent(query)}`,
+      anime: `${config.API_BASE_URL}/search-anime?query=${encodeURIComponent(query)}`
+    };
+
+    try {
+      const res = await fetch(urls[activeTab]);
+      const data = await res.json();
+      
+      if (activeTab === 'anime') {
+        setContent(data.data || []);
+      } else {
+        setContent(data.results || []);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setContent([]);
+    }
+    
+    setLoading(false);
   };
 
   const loadTrending = async (type, retryCount = 0) => {
@@ -90,28 +136,6 @@ function HomePage() {
     }
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!search.trim()) return;
-
-    setLoading(true);
-    const urls = {
-      movies: `${config.API_BASE_URL}/search-movies?query=${encodeURIComponent(search)}`,
-      tv: `${config.API_BASE_URL}/search-tv?query=${encodeURIComponent(search)}`,
-      anime: `${config.API_BASE_URL}/search-anime?query=${encodeURIComponent(search)}`
-    };
-
-    const res = await fetch(urls[activeTab]);
-    const data = await res.json();
-    
-    if (activeTab === 'anime') {
-      setContent(data.data || []);
-    } else {
-      setContent(data.results || []);
-    }
-    setLoading(false);
-  };
-
   const handleMoodSelect = async (mood) => {
     setSelectedMood(mood);
     setSelectedGenre("");
@@ -138,11 +162,11 @@ function HomePage() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setSearch("");
     setSelectedMood("");
     setSelectedGenre("");
     setShowMoodSelector(false);
     setShowFavorites(false);
+    navigate('/'); // Clear URL params
     loadTrending(tab);
   };
 
@@ -204,19 +228,10 @@ function HomePage() {
     }
   };
 
-  const showMyFavorites = () => {
-    setShowFavorites(true);
-    setContent([]);
-  };
-
   const handleCardClick = (item) => {
     const contentId = activeTab === 'anime' ? item.mal_id : item.id;
     navigate(`/${activeTab}/${contentId}`);
   };
-
-  useEffect(() => {
-    loadTrending(activeTab);
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -225,18 +240,18 @@ function HomePage() {
     }
   }, [isAuthenticated]);
 
-  const renderCard = (item, index) => {
-    const contentId = activeTab === 'anime' ? item.mal_id : item.id;
-    const favoriteKey = `${activeTab}-${contentId}`;
+  const renderCard = (item, index, cardActiveTab) => {
+    const contentId = cardActiveTab === 'anime' ? item.mal_id : item.id;
+    const favoriteKey = `${cardActiveTab}-${contentId}`;
     const isFavorite = favoriteIds.has(favoriteKey);
     const favoriteItem = favorites.find(fav => 
-      fav.content_type === activeTab && fav.content_id === String(contentId)
+      fav.content_type === cardActiveTab && fav.content_id === String(contentId)
     );
 
-    if (activeTab === 'anime') {
+    if (cardActiveTab === 'anime') {
       return (
         <div className="media-card" key={item.mal_id} style={{ animationDelay: `${index * 0.05}s` }}>
-          <div className="card-image-wrapper" onClick={() => handleCardClick(item)}>
+          <div className="card-image-wrapper" onClick={() => navigate(`/anime/${item.mal_id}`)}>
             {item.images?.jpg?.image_url ? (
               <img src={item.images.jpg.image_url} alt={item.title} loading="lazy" />
             ) : (
@@ -261,7 +276,7 @@ function HomePage() {
               <span className="info-badge">{item.episodes ? `${item.episodes} eps` : 'Ongoing'}</span>
             </div>
           </div>
-          <div className="card-content" onClick={() => handleCardClick(item)}>
+          <div className="card-content" onClick={() => navigate(`/anime/${item.mal_id}`)}>
             <h3>{item.title}</h3>
             <div className="card-meta">
               <span className="rating">
@@ -276,7 +291,7 @@ function HomePage() {
     } else {
       return (
         <div className="media-card" key={item.id} style={{ animationDelay: `${index * 0.05}s` }}>
-          <div className="card-image-wrapper" onClick={() => handleCardClick(item)}>
+          <div className="card-image-wrapper" onClick={() => navigate(`/${cardActiveTab}/${item.id}`)}>
             {item.poster_path ? (
               <img
                 src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
@@ -301,14 +316,14 @@ function HomePage() {
               </button>
             </div>
             <div className="card-quick-info">
-              <span className="info-badge">{activeTab === 'movies' ? 'Movie' : 'TV'}</span>
+              <span className="info-badge">{cardActiveTab === 'movies' ? 'Movie' : 'TV'}</span>
               <span className="info-badge">
                 <Star size={12} fill="#fbbf24" color="#fbbf24" />
                 {item.vote_average?.toFixed(1)}
               </span>
             </div>
           </div>
-          <div className="card-content" onClick={() => handleCardClick(item)}>
+          <div className="card-content" onClick={() => navigate(`/${cardActiveTab}/${item.id}`)}>
             <h3>{item.title || item.name}</h3>
             <div className="card-meta">
               <span className="year">{(item.release_date || item.first_air_date)?.split('-')[0]}</span>
@@ -345,9 +360,8 @@ function HomePage() {
       <div 
         className="media-card" 
         key={fav.id}
-        onClick={() => navigate(`/${fav.content_type}/${fav.content_id}`)}
       >
-        <div className="card-image-wrapper">
+        <div className="card-image-wrapper" onClick={() => navigate(`/${fav.content_type}/${fav.content_id}`)}>
           {fav.poster_url ? (
             <img src={fav.poster_url} alt={fav.title} loading="lazy" />
           ) : (
@@ -371,7 +385,7 @@ function HomePage() {
             <span className="info-badge">{fav.content_type}</span>
           </div>
         </div>
-        <div className="card-content">
+        <div className="card-content" onClick={() => navigate(`/${fav.content_type}/${fav.content_id}`)}>
           <h3>{fav.title}</h3>
           <div className="card-meta">
             <span className="year">{new Date(fav.added_at).toLocaleDateString()}</span>
@@ -533,6 +547,7 @@ function HomePage() {
       <div className="content-section">
         <h2 className="section-title">
           {showFavorites ? 'My Favorites' :
+           searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
            selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` : 
            selectedGenre ? selectedGenre :
            `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
@@ -563,8 +578,8 @@ function HomePage() {
             ) : (
               content.length > 0 ? (
                 activeTab === 'anime' 
-                  ? content.map((item, index) => renderCard(item, index))
-                  : content.map((item, index) => renderCard(item, index))
+                  ? content.map((item, index) => renderCard(item, index, 'anime'))
+                  : content.map((item, index) => renderCard(item, index, activeTab))
               ) : (
                 !error && (
                   <div className="empty-state">
