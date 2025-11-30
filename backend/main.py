@@ -320,6 +320,49 @@ def clear_history(
     db.commit()
     return {"message": "History cleared"}
 
+# Delete all history for a user
+@app.delete("/history/all")
+async def delete_all_history(current_user: dict = Depends(get_current_user)):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM watch_history WHERE user_id = ?', (current_user['id'],))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": "All history cleared"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Delete single history item
+@app.delete("/history/{history_id}")
+async def delete_history_item(history_id: int, current_user: dict = Depends(get_current_user)):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Verify the history item belongs to the user
+        cursor.execute(
+            'SELECT * FROM watch_history WHERE id = ? AND user_id = ?',
+            (history_id, current_user['id'])
+        )
+        history = cursor.fetchone()
+        
+        if not history:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="History item not found")
+        
+        cursor.execute('DELETE FROM watch_history WHERE id = ?', (history_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": "History item deleted"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============ DETAIL ENDPOINTS ============
 
 @app.get("/movie/{movie_id}")
