@@ -819,31 +819,59 @@ function HomePage() {
 
   return (
     <>
-      <nav className="content-tabs">
-        <button
-          className={`tab-button ${activeTab === 'movies' ? 'active' : ''}`}
-          onClick={() => handleTabChange('movies')}
-        >
-          <Film size={20} />
-          <span>Movies</span>
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'tv' ? 'active' : ''}`}
-          onClick={() => handleTabChange('tv')}
-        >
-          <Tv size={20} />
-          <span>TV Shows</span>
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'anime' ? 'active' : ''}`}
-          onClick={() => handleTabChange('anime')}
-        >
-          <TrendingUp size={20} />
-          <span>Anime</span>
-        </button>
-      </nav>
+      {!showFavorites && !showHistory && (
+        <nav className="content-tabs">
+          <button
+            className={`tab-button ${activeTab === 'movies' ? 'active' : ''}`}
+            onClick={() => handleTabChange('movies')}
+          >
+            <Film size={20} />
+            <span>Movies</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'tv' ? 'active' : ''}`}
+            onClick={() => handleTabChange('tv')}
+          >
+            <Tv size={20} />
+            <span>TV Shows</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'anime' ? 'active' : ''}`}
+            onClick={() => handleTabChange('anime')}
+          >
+            <TrendingUp size={20} />
+            <span>Anime</span>
+          </button>
+        </nav>
+      )}
 
-      {renderFeaturedSection()}
+      {(showFavorites || showHistory) && (
+        <nav className="content-tabs">
+          <button
+            className={`tab-button ${activeTab === 'movies' ? 'active' : ''}`}
+            onClick={() => setActiveTab('movies')}
+          >
+            <Film size={20} />
+            <span>Movies</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'tv' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tv')}
+          >
+            <Tv size={20} />
+            <span>TV Shows</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'anime' ? 'active' : ''}`}
+            onClick={() => setActiveTab('anime')}
+          >
+            <TrendingUp size={20} />
+            <span>Anime</span>
+          </button>
+        </nav>
+      )}
+
+      {!showFavorites && !showHistory && renderFeaturedSection()}
 
       {!showFavorites && !showHistory && (
         <div className="controls-section">
@@ -944,8 +972,8 @@ function HomePage() {
         ) : (
           <div className="content-grid">
             {showFavorites ? (
-              favorites.length > 0 ? (
-                favorites.map(fav => renderFavoriteCard(fav))
+              favorites.filter(fav => fav.content_type === activeTab).length > 0 ? (
+                favorites.filter(fav => fav.content_type === activeTab).map(fav => renderFavoriteCard(fav))
               ) : (
                 <div className="empty-state">
                   <Heart size={64} color="#64748b" />
@@ -954,8 +982,8 @@ function HomePage() {
                 </div>
               )
             ) : showHistory ? (
-              history.length > 0 ? (
-                history.map(hist => renderHistoryCard(hist))
+              history.filter(hist => hist.content_type === activeTab).length > 0 ? (
+                history.filter(hist => hist.content_type === activeTab).map(hist => renderHistoryCard(hist))
               ) : (
                 <div className="empty-state">
                   <Clock size={64} color="#64748b" />
