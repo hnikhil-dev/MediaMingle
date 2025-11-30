@@ -383,3 +383,220 @@ def get_anime_details(anime_id: int):
     url = f"https://api.jikan.moe/v4/anime/{anime_id}/full"
     response = requests.get(url)
     return response.json()
+
+# ============ ADVANCED FILTER ENDPOINTS ============
+
+@app.get("/discover-movies")
+def discover_movies(
+    year_min: int = Query(1900),
+    year_max: int = Query(2025),
+    rating_min: float = Query(0.0),
+    language: str = Query("en"),
+    sort_by: str = Query("popularity.desc"),
+    with_genres: str = Query(""),
+    page: int = Query(1)
+):
+    url = "https://api.themoviedb.org/3/discover/movie"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "primary_release_date.gte": f"{year_min}-01-01",
+        "primary_release_date.lte": f"{year_max}-12-31",
+        "vote_average.gte": rating_min,
+        "with_original_language": language,
+        "sort_by": sort_by,
+        "page": page
+    }
+    
+    if with_genres:
+        params["with_genres"] = with_genres
+    
+    response = requests.get(url, params=params)
+    return response.json()
+
+@app.get("/discover-tv")
+def discover_tv(
+    year_min: int = Query(1900),
+    year_max: int = Query(2025),
+    rating_min: float = Query(0.0),
+    language: str = Query("en"),
+    sort_by: str = Query("popularity.desc"),
+    with_genres: str = Query(""),
+    page: int = Query(1)
+):
+    url = "https://api.themoviedb.org/3/discover/tv"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "first_air_date.gte": f"{year_min}-01-01",
+        "first_air_date.lte": f"{year_max}-12-31",
+        "vote_average.gte": rating_min,
+        "with_original_language": language,
+        "sort_by": sort_by,
+        "page": page
+    }
+    
+    if with_genres:
+        params["with_genres"] = with_genres
+    
+    response = requests.get(url, params=params)
+    return response.json()
+
+# ============ ANILIST API FOR BETTER ANIME ============
+
+@app.get("/discover-anime")
+def discover_anime(
+    year_min: int = Query(1960),
+    year_max: int = Query(2025),
+    rating_min: int = Query(0),
+    season: str = Query(None),
+    genre: str = Query(None),
+    sort_by: str = Query("POPULARITY_DESC"),
+    page: int = Query(1)
+):
+    """
+    Use AniList GraphQL API for better anime discovery
+    """
+    url = "https://graphql.anilist.co"
+    
+    # Build GraphQL query
+    query = """
+    query ($page: Int, $seasonYear_greater: Int, $seasonYear_lesser: Int, $averageScore_greater: Int, $season: MediaSeason, $genre: String, $sort: [MediaSort]) {
+      Page(page: $page, perPage: 20) {
+        media(
+          type: ANIME,
+          seasonYear_greater: $seasonYear_greater,
+          seasonYear_lesser: $seasonYear_lesser,
+          averageScore_greater: $averageScore_greater,
+          season: $season,
+          genre: $genre,
+          sort: $sort
+        ) {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            large
+            extraLarge
+          }
+          bannerImage
+          averageScore
+          seasonYear
+          episodes
+          format
+          genres
+          description
+          trailer {
+            id
+            site
+          }
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "page": page,
+        "seasonYear_greater": year_min - 1,
+        "seasonYear_lesser": year_max + 1,
+        "averageScore_greater": rating_min,
+        "sort": [sort_by]
+    }
+    
+    if season:
+        variables["season"] = season.upper()
+    
+    if genre:
+        variables["genre"] = genre
+    
+    response = requests.post(url, json={"query": query, "variables": variables})
+    return response.json()
+
+@app.get("/anime-anilist/{anime_id}")
+def get_anime_anilist_details(anime_id: int):
+    """
+    Get detailed anime info from AniList
+    """
+    url = "https://graphql.anilist.co"
+    
+    query = """
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        title {
+          english
+          romaji
+          native
+        }
+        coverImage {
+          large
+          extraLarge
+        }
+        bannerImage
+        description
+        averageScore
+        seasonYear
+        season
+        episodes
+        duration
+        format
+        status
+        genres
+        studios {
+          nodes {
+            name
+          }
+        }
+        characters(sort: ROLE) {
+          edges {
+            role
+            node {
+              name {
+                full
+              }
+              image {
+                large
+              }
+            }
+          }
+        }
+        trailer {
+          id
+          site
+        }
+        recommendations(sort: RATING_DESC) {
+          nodes {
+            mediaRecommendation {
+              id
+              title {
+                english
+                romaji
+              }
+              coverImage {
+                large
+              }
+              averageScore
+            }
+          }
+        }
+      }
+    }
+    """
+    
+    variables = {"id": anime_id}
+    
+    response = requests.post(url, json={"query": query, "variables": variables})
+    return response.json()
+
+# Genre mappings for TMDb
+@app.get("/movie-genres")
+def get_movie_genres():
+    url = "https://api.themoviedb.org/3/genre/movie/list"
+    params = {"api_key": TMDB_API_KEY}
+    return requests.get(url, params=params).json()
+
+@app.get("/tv-genres")
+def get_tv_genres():
+    url = "https://api.themoviedb.org/3/genre/tv/list"
+    params = {"api_key": TMDB_API_KEY}
+    return requests.get(url, params=params).json()
