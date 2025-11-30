@@ -77,8 +77,14 @@ function HomePage() {
       const data = await res.json();
 
       if (activeTab === 'anime') {
+        // Use Jikan fallback for anime genres
+        const url = `${config.API_BASE_URL}/anime-by-genre?genre=${encodeURIComponent(genre)}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
         setContent(data.data || []);
-      } else {
+      }
+      else {
         setContent(data.results || []);
       }
     } catch (error) {
@@ -269,26 +275,56 @@ function HomePage() {
     try {
       if (activeTab === 'anime') {
         // For anime, use AniList API with genre filter
-        const url = `${config.API_BASE_URL}/discover-anime?year_min=1960&year_max=2025&rating_min=0&sort_by=POPULARITY_DESC&genre=${encodeURIComponent(genre)}&page=1`;
+        // AniList genres need exact case match
+        const animeGenreMap = {
+          'Shounen': 'Action',
+          'Slice of Life': 'Slice of Life',
+          'Action': 'Action',
+          'Romance': 'Romance',
+          'Psychological': 'Psychological',
+          'Comedy': 'Comedy'
+        };
+
+        const mappedGenre = animeGenreMap[genre] || genre;
+        const url = `${config.API_BASE_URL}/discover-anime?year_min=1960&year_max=2025&rating_min=0&sort_by=POPULARITY_DESC&genre=${encodeURIComponent(mappedGenre)}&page=1`;
+
+        console.log('Fetching anime with genre:', mappedGenre); // Debug log
+
         const response = await fetch(url);
         const data = await response.json();
 
-        const results = data.data?.Page?.media || [];
-        const convertedResults = results.map(item => ({
-          mal_id: item.id,
-          title: item.title?.english || item.title?.romaji,
-          images: {
-            jpg: {
-              image_url: item.coverImage?.large || item.coverImage?.extraLarge
-            }
-          },
-          score: item.averageScore ? item.averageScore / 10 : null,
-          year: item.seasonYear,
-          episodes: item.episodes,
-          type: item.format,
-          synopsis: item.description
-        }));
-        setContent(convertedResults);
+        console.log('Anime genre response:', data); // Debug log
+
+        if (data.error) {
+          console.error('AniList API error:', data.error);
+          // Fallback to Jikan if AniList fails
+          const fallbackUrl = `${config.API_BASE_URL}/trending-anime`;
+          const fallbackRes = await fetch(fallbackUrl);
+          const fallbackData = await fallbackRes.json();
+
+          // Filter by genre name in results
+          const filtered = (fallbackData.data || []).filter(item =>
+            item.genres?.some(g => g.name === genre)
+          );
+          setContent(filtered);
+        } else {
+          const results = data.data?.Page?.media || [];
+          const convertedResults = results.map(item => ({
+            mal_id: item.id,
+            title: item.title?.english || item.title?.romaji,
+            images: {
+              jpg: {
+                image_url: item.coverImage?.large || item.coverImage?.extraLarge
+              }
+            },
+            score: item.averageScore ? item.averageScore / 10 : null,
+            year: item.seasonYear,
+            episodes: item.episodes,
+            type: item.format,
+            synopsis: item.description
+          }));
+          setContent(convertedResults);
+        }
       } else {
         // For movies/TV, use TMDb discover API with genre ID
         const genreId = genreMapping[activeTab][genre];
@@ -304,6 +340,7 @@ function HomePage() {
       }
     } catch (error) {
       console.error('Genre filter error:', error);
+      setError('Failed to load genre content');
       setContent([]);
     }
 

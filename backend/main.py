@@ -457,28 +457,31 @@ def discover_anime(
     """
     url = "https://graphql.anilist.co"
     
-    # Build GraphQL query
-    query = """
-    query ($page: Int, $seasonYear_greater: Int, $seasonYear_lesser: Int, $averageScore_greater: Int, $season: MediaSeason, $genre: String, $sort: [MediaSort]) {
-      Page(page: $page, perPage: 20) {
+    # Build genre filter - AniList accepts genre as array
+    genre_filter = f'genre_in: ["{genre}"]' if genre else ''
+    
+    # Build GraphQL query dynamically
+    query = f"""
+    query {{
+      Page(page: {page}, perPage: 20) {{
         media(
           type: ANIME,
-          seasonYear_greater: $seasonYear_greater,
-          seasonYear_lesser: $seasonYear_lesser,
-          averageScore_greater: $averageScore_greater,
-          season: $season,
-          genre: $genre,
-          sort: $sort
-        ) {
+          seasonYear_greater: {year_min - 1},
+          seasonYear_lesser: {year_max + 1},
+          averageScore_greater: {rating_min},
+          {f'season: {season},' if season else ''}
+          {genre_filter}
+          sort: {sort_by}
+        ) {{
           id
-          title {
+          title {{
             english
             romaji
-          }
-          coverImage {
+          }}
+          coverImage {{
             large
             extraLarge
-          }
+          }}
           bannerImage
           averageScore
           seasonYear
@@ -486,31 +489,21 @@ def discover_anime(
           format
           genres
           description
-          trailer {
+          trailer {{
             id
             site
-          }
-        }
-      }
-    }
+          }}
+        }}
+      }}
+    }}
     """
     
-    variables = {
-        "page": page,
-        "seasonYear_greater": year_min - 1,
-        "seasonYear_lesser": year_max + 1,
-        "averageScore_greater": rating_min,
-        "sort": [sort_by]
-    }
-    
-    if season:
-        variables["season"] = season.upper()
-    
-    if genre:
-        variables["genre"] = genre
-    
-    response = requests.post(url, json={"query": query, "variables": variables})
-    return response.json()
+    try:
+        response = requests.post(url, json={"query": query})
+        return response.json()
+    except Exception as e:
+        return {"error": str(e), "data": {"Page": {"media": []}}}
+
 
 @app.get("/anime-anilist/{anime_id}")
 def get_anime_anilist_details(anime_id: int):
@@ -587,6 +580,39 @@ def get_anime_anilist_details(anime_id: int):
     
     response = requests.post(url, json={"query": query, "variables": variables})
     return response.json()
+
+@app.get("/anime-by-genre")
+def get_anime_by_genre(genre: str = Query(...)):
+    """
+    Fallback: Use Jikan API to filter anime by genre
+    """
+    # Jikan genre mapping
+    genre_ids = {
+        "Action": 1,
+        "Adventure": 2,
+        "Comedy": 4,
+        "Drama": 8,
+        "Fantasy": 10,
+        "Horror": 14,
+        "Mystery": 7,
+        "Psychological": 40,
+        "Romance": 22,
+        "Sci-Fi": 24,
+        "Slice of Life": 36,
+        "Sports": 30,
+        "Supernatural": 37,
+        "Thriller": 41
+    }
+    
+    genre_id = genre_ids.get(genre, 1)
+    url = f"https://api.jikan.moe/v4/anime?genres={genre_id}&order_by=popularity&sort=asc&limit=20"
+    
+    try:
+        response = requests.get(url)
+        time.sleep(0.5)  # Rate limit
+        return response.json()
+    except Exception as e:
+        return {"error": str(e), "data": []}
 
 # Genre mappings for TMDb
 @app.get("/movie-genres")
