@@ -18,6 +18,20 @@ function DetailPage({ contentType }) {
   const [trailer, setTrailer] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const filterIncompleteContent = (items, type) => {
+    return items.filter(item => {
+      if (type === 'anime') {
+        const entry = item.entry || item;
+        const hasImage = entry.images?.jpg?.image_url;
+        const hasScore = entry.score && entry.score > 0;
+        return hasImage && hasScore;
+      } else {
+        const hasPoster = item.poster_path;
+        const hasRating = item.vote_average && item.vote_average > 0;
+        return hasPoster && hasRating;
+      }
+    });
+  };
 
   useEffect(() => {
     loadContentDetails();
@@ -250,9 +264,11 @@ function DetailPage({ contentType }) {
     })) || [])
     : (content.credits?.cast?.slice(0, 6) || []);
 
-  const similar = contentType === 'anime'
-    ? (content.recommendations?.slice(0, 6) || [])
-    : (content.similar?.results?.slice(0, 6) || []);
+  const similarRaw = contentType === 'anime'
+    ? (content.recommendations || [])
+    : (content.similar?.results || []);
+
+  const similar = filterIncompleteContent(similarRaw, contentType).slice(0, 6);
 
   return (
     <div className="detail-page">

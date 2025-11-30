@@ -30,6 +30,22 @@ function HomePage() {
 
   const { isAuthenticated } = useAuth();
 
+  const filterIncompleteContent = (items, type) => {
+    return items.filter(item => {
+      if (type === 'anime') {
+        // For anime: must have image and score
+        const hasImage = item.images?.jpg?.image_url;
+        const hasScore = item.score && item.score > 0;
+        return hasImage && hasScore;
+      } else {
+        // For movies/TV: must have poster and rating
+        const hasPoster = item.poster_path;
+        const hasRating = item.vote_average && item.vote_average > 0;
+        return hasPoster && hasRating;
+      }
+    });
+  };
+
   const moods = [
     { value: "happy", icon: Smile, label: "Happy", color: "#fbbf24" },
     { value: "sad", icon: Frown, label: "Sad", color: "#60a5fa" },
@@ -256,11 +272,12 @@ function HomePage() {
       const res = await fetch(urls[activeTab]);
       const data = await res.json();
 
-      if (activeTab === 'anime') {
-        setContent(data.data || []);
-      } else {
-        setContent(data.results || []);
-      }
+      const results = activeTab === 'anime' ? (data.data || []) : (data.results || []);
+
+      // FILTER OUT INCOMPLETE CONTENT
+      const filteredResults = filterIncompleteContent(results, activeTab);
+
+      setContent(filteredResults);
     } catch (error) {
       console.error('Search error:', error);
       setContent([]);
@@ -268,6 +285,7 @@ function HomePage() {
 
     setLoading(false);
   };
+
 
   const loadTrending = async (type, retryCount = 0) => {
     setLoading(true);
@@ -296,9 +314,12 @@ function HomePage() {
       const data = await response.json();
       const results = type === 'anime' ? (data.data || []) : (data.results || []);
 
-      setContent(results);
-      if (results.length > 0) {
-        setFeaturedContent(results[0]);
+      // FILTER OUT INCOMPLETE CONTENT
+      const filteredResults = filterIncompleteContent(results, type);
+
+      setContent(filteredResults);
+      if (filteredResults.length > 0) {
+        setFeaturedContent(filteredResults[0]);
       }
       setLoading(false);
     } catch (err) {
@@ -342,7 +363,10 @@ function HomePage() {
 
         const response = await fetch(url);
         const data = await response.json();
-        setContent(data.data || []);
+
+        // FILTER OUT INCOMPLETE CONTENT
+        const filteredResults = filterIncompleteContent(data.data || [], 'anime');
+        setContent(filteredResults);
       } else {
         if (filters.language) {
           params.append('language', filters.language);
@@ -357,7 +381,10 @@ function HomePage() {
 
         const response = await fetch(url);
         const data = await response.json();
-        setContent(data.results || []);
+
+        // FILTER OUT INCOMPLETE CONTENT
+        const filteredResults = filterIncompleteContent(data.results || [], activeTab);
+        setContent(filteredResults);
       }
 
       setLoading(false);
@@ -387,12 +414,12 @@ function HomePage() {
     const res = await fetch(url);
     const data = await res.json();
 
-    if (activeTab === 'anime') {
-      setContent(data.data || []);
-    } else {
-      setContent(data.results || []);
-    }
+    const results = activeTab === 'anime' ? (data.data || []) : (data.results || []);
 
+    // FILTER OUT INCOMPLETE CONTENT
+    const filteredResults = filterIncompleteContent(results, activeTab);
+
+    setContent(filteredResults);
     setLoading(false);
     setShowMoodSelector(false);
   };
@@ -410,7 +437,9 @@ function HomePage() {
         const response = await fetch(url);
         const data = await response.json();
 
-        setContent(data.data || []);
+        // FILTER OUT INCOMPLETE CONTENT
+        const filteredResults = filterIncompleteContent(data.data || [], 'anime');
+        setContent(filteredResults);
       } else {
         const genreId = genreMapping[activeTab][genre];
 
@@ -420,7 +449,10 @@ function HomePage() {
 
           const response = await fetch(url);
           const data = await response.json();
-          setContent(data.results || []);
+
+          // FILTER OUT INCOMPLETE CONTENT
+          const filteredResults = filterIncompleteContent(data.results || [], activeTab);
+          setContent(filteredResults);
         }
       }
     } catch (error) {
@@ -577,7 +609,10 @@ function HomePage() {
                 loading="lazy"
               />
             ) : (
-              <div className="placeholder-image">No Poster</div>
+              <div className="placeholder-image">
+                <Film className="placeholder-icon" size={40} />
+                <span>No Poster</span>
+              </div>
             )}
             <div className="card-overlay">
               <button className="card-action-btn play-btn">
