@@ -22,6 +22,7 @@ function HomePage() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState(null);
@@ -85,10 +86,15 @@ function HomePage() {
   useEffect(() => {
     const searchQuery = searchParams.get('search');
     const showFavs = searchParams.get('favorites');
+    const showHist = searchParams.get('history');
     const tabParam = searchParams.get('tab');
 
     if (showFavs === 'true') {
       setShowFavorites(true);
+      setShowHistory(false);
+    } else if (showHist === 'true') {
+      setShowHistory(true);
+      setShowFavorites(false);
     } else if (searchQuery) {
       handleSearchFromURL(searchQuery);
     } else if (tabParam && tabParam !== activeTab) {
@@ -96,6 +102,7 @@ function HomePage() {
       loadTrending(tabParam);
     } else {
       setShowFavorites(false);
+      setShowHistory(false);
       if (content.length === 0) {
         loadTrending(activeTab);
       }
@@ -495,7 +502,8 @@ function HomePage() {
     if (!isAuthenticated) return;
 
     try {
-      const response = await axios.get(`${config.API_BASE_URL}/history?limit=10`, {
+      const limit = showHistory ? 50 : 10;
+      const response = await axios.get(`${config.API_BASE_URL}/history?limit=${limit}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setHistory(response.data);
@@ -503,6 +511,7 @@ function HomePage() {
       console.error('Failed to load history', error);
     }
   };
+
 
   const toggleFavorite = async (item, isFavorite, favoriteId) => {
     if (!isAuthenticated) return;
@@ -538,7 +547,7 @@ function HomePage() {
       loadFavorites();
       loadHistory();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, showHistory]);
 
   const renderCard = (item, index, cardActiveTab) => {
     const contentId = cardActiveTab === 'anime' ? item.mal_id : item.id;
@@ -686,21 +695,38 @@ function HomePage() {
 
     return (
       <div
-        className="history-card"
+        className="media-card"
         key={hist.id}
-        onClick={() => navigate(`/${hist.content_type}/${hist.content_id}`)}
         onContextMenu={handleHistoryContextMenu}
       >
-        {hist.poster_url ? (
-          <img src={hist.poster_url} alt={hist.title} loading="lazy" />
-        ) : (
-          <div className="placeholder-image">No Image</div>
-        )}
-        <div className="history-overlay">
-          <Clock size={16} />
-          <span>{new Date(hist.viewed_at).toLocaleDateString()}</span>
+        <div className="card-image-wrapper" onClick={() => navigate(`/${hist.content_type}/${hist.content_id}`)}>
+          {hist.poster_url ? (
+            <img src={hist.poster_url} alt={hist.title} loading="lazy" />
+          ) : (
+            <div className="placeholder-image">
+              <Film className="placeholder-icon" size={40} />
+              <span>No Poster</span>
+            </div>
+          )}
+          <div className="card-overlay">
+            <button className="card-action-btn play-btn">
+              <Play size={20} fill="white" />
+            </button>
+          </div>
+          <div className="card-quick-info">
+            <span className="info-badge">{hist.content_type}</span>
+            <span className="info-badge">
+              <Clock size={12} />
+              {new Date(hist.viewed_at).toLocaleDateString()}
+            </span>
+          </div>
         </div>
-        <h4>{hist.title}</h4>
+        <div className="card-content" onClick={() => navigate(`/${hist.content_type}/${hist.content_id}`)}>
+          <h3>{hist.title}</h3>
+          <div className="card-meta">
+            <span className="year">Watched {new Date(hist.viewed_at).toLocaleDateString()}</span>
+          </div>
+        </div>
       </div>
     );
   };
@@ -819,19 +845,7 @@ function HomePage() {
 
       {renderFeaturedSection()}
 
-      {isAuthenticated && history.length > 0 && !showFavorites && (
-        <div className="history-section">
-          <h2 className="section-title">
-            <Clock size={24} />
-            Recently Viewed
-          </h2>
-          <div className="history-grid">
-            {history.map(hist => renderHistoryCard(hist))}
-          </div>
-        </div>
-      )}
-
-      {!showFavorites && (
+      {!showFavorites && !showHistory && (
         <div className="controls-section">
           <div className="controls-row">
             <button
@@ -866,7 +880,7 @@ function HomePage() {
         </div>
       )}
 
-      {showMoodSelector && (
+      {showMoodSelector && !showHistory && (
         <div className="mood-panel">
           <h2>How are you feeling today?</h2>
           <div className="mood-options">
@@ -908,12 +922,14 @@ function HomePage() {
       <div className="content-section">
         <h2 className="section-title">
           {showFavorites ? 'My Favorites' :
-            searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
-              activeFilters ? 'Filtered Results' :
-                selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` :
-                  selectedGenre ? selectedGenre :
-                    `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
+            showHistory ? 'Watch History' :
+              searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
+                activeFilters ? 'Filtered Results' :
+                  selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` :
+                    selectedGenre ? selectedGenre :
+                      `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
         </h2>
+
 
         {loading && !retrying ? (
           <div className="loading-grid">
@@ -935,6 +951,16 @@ function HomePage() {
                   <Heart size={64} color="#64748b" />
                   <p>No favorites yet</p>
                   <span>Start adding content to your favorites!</span>
+                </div>
+              )
+            ) : showHistory ? (
+              history.length > 0 ? (
+                history.map(hist => renderHistoryCard(hist))
+              ) : (
+                <div className="empty-state">
+                  <Clock size={64} color="#64748b" />
+                  <p>No watch history yet</p>
+                  <span>Start watching content to build your history!</span>
                 </div>
               )
             ) : (
