@@ -5,27 +5,30 @@
 
 .back-button {
   position: fixed;
-  top: 80px;
-  left: 260px;
+  bottom: 24px;
+  right: 24px;
   z-index: 100;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  background: rgba(30, 41, 59, 0.9);
+  padding: 12px 24px;
+  background: rgba(30, 41, 59, 0.95);
   backdrop-filter: blur(10px);
   border: 2px solid #334155;
-  border-radius: 10px;
+  border-radius: 50px;
   color: #f1f5f9;
   font-weight: 600;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .back-button:hover {
-  background: rgba(99, 102, 241, 0.9);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-color: #6366f1;
-  transform: translateX(-5px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
 }
 
 .detail-hero {
@@ -347,9 +350,9 @@
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .back-button {
-    left: 16px;
-    top: 70px;
-    padding: 8px 16px;
+    bottom: 80px;
+    right: 16px;
+    padding: 10px 20px;
     font-size: 14px;
   }
 
