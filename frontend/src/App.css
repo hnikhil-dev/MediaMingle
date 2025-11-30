@@ -1639,3 +1639,206 @@ body {
   height: 40px;
   color: #475569;
 }
+
+/* Section Header with Clear Button */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.section-header .section-title {
+  margin: 0;
+}
+
+.clear-history-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid #ef4444;
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clear-history-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #f87171;
+  color: #fca5a5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.clear-history-btn:active {
+  transform: translateY(0);
+}
+
+/* Delete button on cards */
+.delete-btn {
+  background: rgba(239, 68, 68, 0.9) !important;
+  border-color: #ef4444 !important;
+}
+
+.delete-btn:hover {
+  background: rgba(220, 38, 38, 1) !important;
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .clear-history-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Delete button on cards - make it visible */
+.card-action-btn.delete-btn {
+  background: #ef4444 !important;
+  border: 2px solid #dc2626 !important;
+  z-index: 50;
+}
+
+.card-action-btn.delete-btn:hover {
+  background: #dc2626 !important;
+  transform: scale(1.15);
+}
+
+/* ============ CLEAR ALL HISTORY BUTTON ============ */
+.clear-history-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
+  backdrop-filter: blur(10px);
+  border: 2px solid #ef4444;
+  border-radius: 12px;
+  color: #fca5a5;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.clear-history-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(239, 68, 68, 0.1) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.clear-history-btn:hover::before {
+  transform: translateX(100%);
+}
+
+.clear-history-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.25) 100%);
+  border-color: #f87171;
+  color: #fee2e2;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+}
+
+.clear-history-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.clear-history-btn svg {
+  filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.4));
+}
+
+/* ============ DELETE BUTTON ON CARDS ============ */
+.card-action-btn.delete-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  border: 2px solid #f87171 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-action-btn.delete-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-action-btn.delete-btn:hover::before {
+  opacity: 1;
+}
+
+.card-action-btn.delete-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+  border-color: #fca5a5 !important;
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.7);
+}
+
+.card-action-btn.delete-btn:active {
+  transform: scale(1.05) rotate(0deg);
+}
+
+.card-action-btn.delete-btn svg {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+  transition: all 0.3s ease;
+}
+
+.card-action-btn.delete-btn:hover svg {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-3px) rotate(-5deg); }
+  75% { transform: translateX(3px) rotate(5deg); }
+}
+
+/* Make delete button more visible on hover */
+.media-card:hover .delete-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-overlay .delete-btn {
+  opacity: 0.9;
+  transition: all 0.3s ease;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+  .clear-history-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
