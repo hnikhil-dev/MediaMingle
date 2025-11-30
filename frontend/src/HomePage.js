@@ -6,6 +6,7 @@ import config from './config';
 import axios from 'axios';
 import FilterPanel from './FilterPanel';
 import ContextMenu from './ContextMenu';
+import ConfirmModal from './ConfirmModal';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ function HomePage() {
   const [activeFilters, setActiveFilters] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const { isAuthenticated } = useAuth();
 
@@ -516,9 +518,6 @@ function HomePage() {
   const clearAllHistory = async () => {
     if (!isAuthenticated) return;
 
-    const confirmed = window.confirm('Are you sure you want to clear all watch history? This cannot be undone.');
-    if (!confirmed) return;
-
     try {
       await axios.delete(`${config.API_BASE_URL}/history/all`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -751,12 +750,12 @@ function HomePage() {
             <button className="card-action-btn play-btn">
               <Play size={20} fill="white" />
             </button>
-            <button 
-              className="card-action-btn delete-btn" 
+            <button
+              className="card-action-btn delete-btn"
               onClick={(e) => {
-              e.stopPropagation();
-              deleteHistoryItem(hist.id);
-            }}>
+                e.stopPropagation();
+                deleteHistoryItem(hist.id);
+              }}>
               <Trash2 size={18} color="#fff" />
             </button>
           </div>
@@ -1006,7 +1005,7 @@ function HomePage() {
                         `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
           </h2>
           {showHistory && history.length > 0 && (
-            <button className="clear-history-btn" onClick={clearAllHistory}>
+            <button className="clear-history-btn" onClick={() => setShowConfirmModal(true)}>
               <Trash2 size={18} />
               <span>Clear All History</span>
             </button>
@@ -1088,6 +1087,16 @@ function HomePage() {
           <span>Link copied to clipboard!</span>
         </div>
       )}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={clearAllHistory}
+        title="Clear All History?"
+        message="This will permanently delete your entire watch history. This action cannot be undone."
+        confirmText="Yes, Clear All"
+        cancelText="Cancel"
+        isDanger={true}
+      />
     </>
   );
 }
