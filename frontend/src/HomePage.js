@@ -42,6 +42,26 @@ function HomePage() {
     anime: ["Shounen", "Slice of Life", "Action", "Romance", "Psychological", "Comedy"]
   };
 
+  const genreMapping = {
+    movies: {
+      "Action": 28,
+      "Comedy": 35,
+      "Drama": 18,
+      "Horror": 27,
+      "Sci-Fi": 878,
+      "Romance": 10749,
+      "Thriller": 53
+    },
+    tv: {
+      "Drama": 18,
+      "Comedy": 35,
+      "Action": 10759,
+      "Mystery": 9648,
+      "Sci-Fi": 10765,
+      "Reality": 10764
+    }
+  };
+
   // Check URL params for search or favorites
   useEffect(() => {
     const searchQuery = searchParams.get('search');
@@ -61,11 +81,11 @@ function HomePage() {
 
   const handleSearchFromURL = async (query) => {
     if (!query.trim()) return;
-
+    
     setLoading(true);
     setShowFavorites(false);
     setActiveFilters(null);
-
+    
     const urls = {
       movies: `${config.API_BASE_URL}/search-movies?query=${encodeURIComponent(query)}`,
       tv: `${config.API_BASE_URL}/search-tv?query=${encodeURIComponent(query)}`,
@@ -75,30 +95,24 @@ function HomePage() {
     try {
       const res = await fetch(urls[activeTab]);
       const data = await res.json();
-
+      
       if (activeTab === 'anime') {
-        // Use Jikan fallback for anime genres
-        const url = `${config.API_BASE_URL}/anime-by-genre?genre=${encodeURIComponent(genre)}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
         setContent(data.data || []);
-      }
-      else {
+      } else {
         setContent(data.results || []);
       }
     } catch (error) {
       console.error('Search error:', error);
       setContent([]);
     }
-
+    
     setLoading(false);
   };
 
   const loadTrending = async (type, retryCount = 0) => {
     setLoading(true);
     setError(null);
-
+    
     const urls = {
       movies: `${config.API_BASE_URL}/trending-movies`,
       tv: `${config.API_BASE_URL}/trending-tv`,
@@ -112,7 +126,7 @@ function HomePage() {
       const response = await fetch(urls[type], {
         signal: controller.signal
       });
-
+      
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -121,7 +135,7 @@ function HomePage() {
 
       const data = await response.json();
       const results = type === 'anime' ? (data.data || []) : (data.results || []);
-
+      
       setContent(results);
       if (results.length > 0) {
         setFeaturedContent(results[0]);
@@ -129,7 +143,7 @@ function HomePage() {
       setLoading(false);
     } catch (err) {
       console.error('Error loading content:', err);
-
+      
       if (retryCount < 2 && err.name === 'AbortError') {
         setRetrying(true);
         setError('Waking up the server... Please wait.');
@@ -137,8 +151,8 @@ function HomePage() {
           loadTrending(type, retryCount + 1);
         }, 3000);
       } else {
-        setError(err.name === 'AbortError'
-          ? 'Server is taking too long to respond. Please refresh the page.'
+        setError(err.name === 'AbortError' 
+          ? 'Server is taking too long to respond. Please refresh the page.' 
           : 'Failed to load content. Please check your connection and try again.');
         setLoading(false);
         setRetrying(false);
@@ -150,7 +164,7 @@ function HomePage() {
   const loadWithFilters = async (filters) => {
     setLoading(true);
     setError(null);
-
+    
     try {
       let url;
       let params = new URLSearchParams({
@@ -162,51 +176,33 @@ function HomePage() {
       });
 
       if (activeTab === 'anime') {
+        // Use Jikan API for anime with filters
         url = `${config.API_BASE_URL}/discover-anime?${params}`;
-        if (filters.season) {
-          url += `&season=${filters.season}`;
-        }
         if (filters.genres && filters.genres.length > 0) {
-          url += `&genre=${filters.genres[0]}`; // AniList takes one genre at a time
+          url += `&genre=${encodeURIComponent(filters.genres[0])}`; // Take first genre
         }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        setContent(data.data || []);
       } else {
+        // Movies/TV use TMDb
         if (filters.language) {
           params.append('language', filters.language);
         }
         if (filters.genres) {
           params.append('with_genres', filters.genres);
         }
-
-        url = activeTab === 'movies'
+        
+        url = activeTab === 'movies' 
           ? `${config.API_BASE_URL}/discover-movies?${params}`
           : `${config.API_BASE_URL}/discover-tv?${params}`;
-      }
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (activeTab === 'anime') {
-        const results = data.data?.Page?.media || [];
-        // Convert AniList format to match our existing format
-        const convertedResults = results.map(item => ({
-          mal_id: item.id,
-          title: item.title?.english || item.title?.romaji,
-          images: {
-            jpg: {
-              image_url: item.coverImage?.large || item.coverImage?.extraLarge
-            }
-          },
-          score: item.averageScore ? item.averageScore / 10 : null,
-          year: item.seasonYear,
-          episodes: item.episodes,
-          type: item.format,
-          synopsis: item.description
-        }));
-        setContent(convertedResults);
-      } else {
+        const response = await fetch(url);
+        const data = await response.json();
         setContent(data.results || []);
       }
-
+      
       setLoading(false);
     } catch (error) {
       console.error('Filter error:', error);
@@ -230,109 +226,47 @@ function HomePage() {
     setActiveFilters(null);
     setLoading(true);
     const url = `${config.API_BASE_URL}/recommend?mood=${mood}&content_type=${activeTab}`;
-
+    
     const res = await fetch(url);
     const data = await res.json();
-
+    
     if (activeTab === 'anime') {
       setContent(data.data || []);
     } else {
       setContent(data.results || []);
     }
-
+    
     setLoading(false);
     setShowMoodSelector(false);
   };
 
-  // Add this near the top with other constants (after moods definition)
-  const genreMapping = {
-    movies: {
-      "Action": 28,
-      "Comedy": 35,
-      "Drama": 18,
-      "Horror": 27,
-      "Sci-Fi": 878,
-      "Romance": 10749,
-      "Thriller": 53
-    },
-    tv: {
-      "Drama": 18,
-      "Comedy": 35,
-      "Action": 10759,
-      "Mystery": 9648,
-      "Sci-Fi": 10765,
-      "Reality": 10764
-    }
-  };
-
-  // Replace the handleGenreSelect function with this:
   const handleGenreSelect = async (genre) => {
     setSelectedGenre(genre);
     setSelectedMood("");
     setActiveFilters(null);
     setLoading(true);
-
+    
     try {
       if (activeTab === 'anime') {
-        // For anime, use AniList API with genre filter
-        // AniList genres need exact case match
-        const animeGenreMap = {
-          'Shounen': 'Action',
-          'Slice of Life': 'Slice of Life',
-          'Action': 'Action',
-          'Romance': 'Romance',
-          'Psychological': 'Psychological',
-          'Comedy': 'Comedy'
-        };
-
-        const mappedGenre = animeGenreMap[genre] || genre;
-        const url = `${config.API_BASE_URL}/discover-anime?year_min=1960&year_max=2025&rating_min=0&sort_by=POPULARITY_DESC&genre=${encodeURIComponent(mappedGenre)}&page=1`;
-
-        console.log('Fetching anime with genre:', mappedGenre); // Debug log
-
+        // Use Jikan API for anime genres
+        const url = `${config.API_BASE_URL}/discover-anime?year_min=1960&year_max=2025&rating_min=0&sort_by=popularity&genre=${encodeURIComponent(genre)}&page=1`;
+        
+        console.log('Fetching anime with genre:', genre, url);
+        
         const response = await fetch(url);
         const data = await response.json();
-
-        console.log('Anime genre response:', data); // Debug log
-
-        if (data.error) {
-          console.error('AniList API error:', data.error);
-          // Fallback to Jikan if AniList fails
-          const fallbackUrl = `${config.API_BASE_URL}/trending-anime`;
-          const fallbackRes = await fetch(fallbackUrl);
-          const fallbackData = await fallbackRes.json();
-
-          // Filter by genre name in results
-          const filtered = (fallbackData.data || []).filter(item =>
-            item.genres?.some(g => g.name === genre)
-          );
-          setContent(filtered);
-        } else {
-          const results = data.data?.Page?.media || [];
-          const convertedResults = results.map(item => ({
-            mal_id: item.id,
-            title: item.title?.english || item.title?.romaji,
-            images: {
-              jpg: {
-                image_url: item.coverImage?.large || item.coverImage?.extraLarge
-              }
-            },
-            score: item.averageScore ? item.averageScore / 10 : null,
-            year: item.seasonYear,
-            episodes: item.episodes,
-            type: item.format,
-            synopsis: item.description
-          }));
-          setContent(convertedResults);
-        }
+        
+        console.log('Anime genre response:', data);
+        
+        setContent(data.data || []);
       } else {
         // For movies/TV, use TMDb discover API with genre ID
         const genreId = genreMapping[activeTab][genre];
-
+        
         if (genreId) {
           const endpoint = activeTab === 'movies' ? 'discover-movies' : 'discover-tv';
           const url = `${config.API_BASE_URL}/${endpoint}?year_min=1900&year_max=2025&rating_min=0&language=&sort_by=popularity.desc&with_genres=${genreId}&page=1`;
-
+          
           const response = await fetch(url);
           const data = await response.json();
           setContent(data.results || []);
@@ -343,7 +277,7 @@ function HomePage() {
       setError('Failed to load genre content');
       setContent([]);
     }
-
+    
     setLoading(false);
   };
 
@@ -360,13 +294,13 @@ function HomePage() {
 
   const loadFavorites = async () => {
     if (!isAuthenticated) return;
-
+    
     try {
       const response = await axios.get(`${config.API_BASE_URL}/favorites`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setFavorites(response.data);
-
+      
       const ids = new Set(response.data.map(fav => `${fav.content_type}-${fav.content_id}`));
       setFavoriteIds(ids);
     } catch (error) {
@@ -376,7 +310,7 @@ function HomePage() {
 
   const loadHistory = async () => {
     if (!isAuthenticated) return;
-
+    
     try {
       const response = await axios.get(`${config.API_BASE_URL}/history?limit=10`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -400,16 +334,16 @@ function HomePage() {
           content_type: activeTab,
           content_id: String(activeTab === 'anime' ? item.mal_id : item.id),
           title: item.title || item.name,
-          poster_url: activeTab === 'anime'
-            ? item.images?.jpg?.image_url
+          poster_url: activeTab === 'anime' 
+            ? item.images?.jpg?.image_url 
             : `https://image.tmdb.org/t/p/w300${item.poster_path}`
         };
-
+        
         await axios.post(`${config.API_BASE_URL}/favorites`, favoriteData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
       }
-
+      
       await loadFavorites();
     } catch (error) {
       console.error('Failed to toggle favorite', error);
@@ -432,7 +366,7 @@ function HomePage() {
     const contentId = cardActiveTab === 'anime' ? item.mal_id : item.id;
     const favoriteKey = `${cardActiveTab}-${contentId}`;
     const isFavorite = favoriteIds.has(favoriteKey);
-    const favoriteItem = favorites.find(fav =>
+    const favoriteItem = favorites.find(fav => 
       fav.content_type === cardActiveTab && fav.content_id === String(contentId)
     );
 
@@ -449,7 +383,7 @@ function HomePage() {
               <button className="card-action-btn play-btn">
                 <Play size={20} fill="white" />
               </button>
-              <button
+              <button 
                 className={`card-action-btn favorite-btn ${isFavorite ? 'active' : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -493,7 +427,7 @@ function HomePage() {
               <button className="card-action-btn play-btn">
                 <Play size={20} fill="white" />
               </button>
-              <button
+              <button 
                 className={`card-action-btn favorite-btn ${isFavorite ? 'active' : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -524,8 +458,8 @@ function HomePage() {
 
   const renderHistoryCard = (hist) => {
     return (
-      <div
-        className="history-card"
+      <div 
+        className="history-card" 
         key={hist.id}
         onClick={() => navigate(`/${hist.content_type}/${hist.content_id}`)}
       >
@@ -545,8 +479,8 @@ function HomePage() {
 
   const renderFavoriteCard = (fav) => {
     return (
-      <div
-        className="media-card"
+      <div 
+        className="media-card" 
         key={fav.id}
       >
         <div className="card-image-wrapper" onClick={() => navigate(`/${fav.content_type}/${fav.content_id}`)}>
@@ -559,7 +493,7 @@ function HomePage() {
             <button className="card-action-btn play-btn">
               <Play size={20} fill="white" />
             </button>
-            <button
+            <button 
               className="card-action-btn favorite-btn active"
               onClick={(e) => {
                 e.stopPropagation();
@@ -586,7 +520,7 @@ function HomePage() {
   const renderFeaturedSection = () => {
     if (!featuredContent || showFavorites) return null;
 
-    const backdrop = activeTab === 'anime'
+    const backdrop = activeTab === 'anime' 
       ? featuredContent.images?.jpg?.large_image_url
       : `https://image.tmdb.org/t/p/original${featuredContent.backdrop_path || featuredContent.poster_path}`;
 
@@ -602,18 +536,18 @@ function HomePage() {
               {activeTab === 'anime' ? featuredContent.score : featuredContent.vote_average?.toFixed(1)}
             </span>
             <span className="featured-year">
-              {activeTab === 'anime'
-                ? featuredContent.year
+              {activeTab === 'anime' 
+                ? featuredContent.year 
                 : (featuredContent.release_date || featuredContent.first_air_date)?.split('-')[0]}
             </span>
           </div>
           <p className="featured-overview">
-            {activeTab === 'anime'
+            {activeTab === 'anime' 
               ? (featuredContent.synopsis?.slice(0, 180) + '...')
               : (featuredContent.overview?.slice(0, 180) + '...')}
           </p>
           <div className="featured-actions">
-            <button
+            <button 
               className="featured-btn primary"
               onClick={() => {
                 const contentId = activeTab === 'anime' ? featuredContent.mal_id : featuredContent.id;
@@ -632,21 +566,21 @@ function HomePage() {
   return (
     <>
       <nav className="content-tabs">
-        <button
+        <button 
           className={`tab-button ${activeTab === 'movies' ? 'active' : ''}`}
           onClick={() => handleTabChange('movies')}
         >
           <Film size={20} />
           <span>Movies</span>
         </button>
-        <button
+        <button 
           className={`tab-button ${activeTab === 'tv' ? 'active' : ''}`}
           onClick={() => handleTabChange('tv')}
         >
           <Tv size={20} />
           <span>TV Shows</span>
         </button>
-        <button
+        <button 
           className={`tab-button ${activeTab === 'anime' ? 'active' : ''}`}
           onClick={() => handleTabChange('anime')}
         >
@@ -672,7 +606,7 @@ function HomePage() {
       {!showFavorites && (
         <div className="controls-section">
           <div className="controls-row">
-            <button
+            <button 
               className={`mood-toggle-button ${showMoodSelector ? 'active' : ''}`}
               onClick={() => setShowMoodSelector(!showMoodSelector)}
             >
@@ -680,7 +614,7 @@ function HomePage() {
               Mood Recommendations
             </button>
 
-            <button
+            <button 
               className={`filter-toggle-button ${activeFilters ? 'active' : ''}`}
               onClick={() => setShowFilters(true)}
             >
@@ -732,7 +666,7 @@ function HomePage() {
             <p>{error}</p>
             {retrying && <div className="retry-spinner"></div>}
             {!retrying && (
-              <button
+              <button 
                 className="retry-button"
                 onClick={() => loadTrending(activeTab)}
               >
@@ -746,11 +680,11 @@ function HomePage() {
       <div className="content-section">
         <h2 className="section-title">
           {showFavorites ? 'My Favorites' :
-            searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
-              activeFilters ? 'Filtered Results' :
-                selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` :
-                  selectedGenre ? selectedGenre :
-                    `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
+           searchParams.get('search') ? `Search Results for "${searchParams.get('search')}"` :
+           activeFilters ? 'Filtered Results' :
+           selectedMood ? `${selectedMood.charAt(0).toUpperCase() + selectedMood.slice(1)} Picks` : 
+           selectedGenre ? selectedGenre :
+           `Trending ${activeTab === 'movies' ? 'Movies' : activeTab === 'tv' ? 'TV Shows' : 'Anime'}`}
         </h2>
 
         {loading && !retrying ? (
@@ -777,7 +711,7 @@ function HomePage() {
               )
             ) : (
               content.length > 0 ? (
-                activeTab === 'anime'
+                activeTab === 'anime' 
                   ? content.map((item, index) => renderCard(item, index, 'anime'))
                   : content.map((item, index) => renderCard(item, index, activeTab))
               ) : (

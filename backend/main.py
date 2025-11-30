@@ -1,91 +1,44 @@
-from fastapi import FastAPI, Query, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from typing import List
 import requests
 import os
-from dotenv import load_dotenv
-from typing import List, Optional
+import time
+
 from database import get_db, init_db, User, Favorite, History
 from schemas import UserCreate, UserLogin, UserResponse, Token, FavoriteCreate, FavoriteResponse, HistoryCreate, HistoryResponse
-
-# Import our new modules
-from database import get_db, init_db, User, Favorite
-from auth import get_password_hash, verify_password, create_access_token, get_current_user, get_current_user_optional
-from schemas import UserCreate, UserLogin, UserResponse, Token, FavoriteCreate, FavoriteResponse
-
-load_dotenv()
+from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 app = FastAPI()
 
-# Initialize database on startup
-@app.on_event("startup")
-def on_startup():
-    init_db()
-
-origins = [
-    "http://localhost:3000",
-    "https://mediamingle.onrender.com",
-    "*"
-]
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# API Keys
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 
-# Mood to Genre mapping (keep your existing one)
-MOOD_TO_GENRE = {
-    "happy": {
-        "movies": [35, 10751, 16],
-        "tv": [35, 10751],
-        "anime_genres": ["Comedy", "Slice of Life", "Romance"]
-    },
-    "sad": {
-        "movies": [18, 10749],
-        "tv": [18],
-        "anime_genres": ["Drama", "Romance", "Slice of Life"]
-    },
-    "exciting": {
-        "movies": [28, 12, 878],
-        "tv": [10759, 10765],
-        "anime_genres": ["Action", "Adventure", "Shounen"]
-    },
-    "scary": {
-        "movies": [27, 53],
-        "tv": [9648, 80],
-        "anime_genres": ["Horror", "Thriller", "Psychological"]
-    },
-    "thoughtful": {
-        "movies": [18, 9648, 36],
-        "tv": [18, 9648],
-        "anime_genres": ["Psychological", "Mystery", "Drama"]
-    },
-    "relaxing": {
-        "movies": [10751, 14, 16],
-        "tv": [10751, 10764],
-        "anime_genres": ["Slice of Life", "Comedy", "Music"]
-    }
-}
+# Initialize database
+init_db()
 
 # ============ AUTH ENDPOINTS ============
 
 @app.post("/signup", response_model=Token)
 def signup(user: UserCreate, db: Session = Depends(get_db)):
-    # Check if email exists
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # Check if user exists
+    existing_user = db.query(User).filter(
+        (User.email == user.email) | (User.username == user.username)
+    ).first()
     
-    # Check if username exists
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already taken")
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email or username already registered")
     
     # Create new user
     hashed_password = get_password_hash(user.password)
@@ -94,11 +47,12 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
         username=user.username,
         hashed_password=hashed_password
     )
+    
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     
-    # Create token
+    # Create access token
     access_token = create_access_token(data={"sub": new_user.email})
     
     return {
@@ -109,13 +63,13 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/login", response_model=Token)
 def login(user: UserLogin, db: Session = Depends(get_db)):
+    # Find user
     db_user = db.query(User).filter(User.email == user.email).first()
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
-        )
     
+    if not db_user or not verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    
+    # Create access token
     access_token = create_access_token(data={"sub": db_user.email})
     
     return {
@@ -128,6 +82,104 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+# ============ TMDB ENDPOINTS ============
+
+@app.get("/trending-movies")
+def get_trending_movies():
+    url = "https://api.themoviedb.org/3/trending/movie/week"
+    params = {"api_key": TMDB_API_KEY}
+    response = requests.get(url, params=params)
+    return response.json()
+
+@app.get("/trending-tv")
+def get_trending_tv():
+    url = "https://api.themoviedb.org/3/trending/tv/week"
+    params = {"api_key": TMDB_API_KEY}
+    response = requests.get(url, params=params)
+    return response.json()
+
+@app.get("/search-movies")
+def search_movies(query: str):
+    url = "https://api.themoviedb.org/3/search/movie"
+    params = {"api_key": TMDB_API_KEY, "query": query}
+    response = requests.get(url, params=params)
+    return response.json()
+
+@app.get("/search-tv")
+def search_tv(query: str):
+    url = "https://api.themoviedb.org/3/search/tv"
+    params = {"api_key": TMDB_API_KEY, "query": query}
+    response = requests.get(url, params=params)
+    return response.json()
+
+# ============ JIKAN ANIME ENDPOINTS ============
+
+@app.get("/trending-anime")
+def get_trending_anime():
+    url = "https://api.jikan.moe/v4/top/anime"
+    params = {"limit": 20}
+    response = requests.get(url, params=params)
+    time.sleep(0.5)  # Rate limit
+    return response.json()
+
+@app.get("/search-anime")
+def search_anime(query: str):
+    url = "https://api.jikan.moe/v4/anime"
+    params = {"q": query, "limit": 20}
+    response = requests.get(url, params=params)
+    time.sleep(0.5)  # Rate limit
+    return response.json()
+
+# ============ MOOD RECOMMENDATIONS ============
+
+@app.get("/recommend")
+def get_recommendations(mood: str, content_type: str):
+    mood_genre_map = {
+        "movies": {
+            "happy": 35,    # Comedy
+            "sad": 18,      # Drama
+            "exciting": 28, # Action
+            "scary": 27,    # Horror
+            "thoughtful": 878, # Sci-Fi
+            "relaxing": 10749  # Romance
+        },
+        "tv": {
+            "happy": 35,
+            "sad": 18,
+            "exciting": 10759,
+            "scary": 9648,
+            "thoughtful": 10765,
+            "relaxing": 10751
+        }
+    }
+    
+    if content_type == "anime":
+        mood_genre_map_anime = {
+            "happy": "4",      # Comedy
+            "sad": "8",        # Drama
+            "exciting": "1",   # Action
+            "scary": "14",     # Horror
+            "thoughtful": "40", # Psychological
+            "relaxing": "36"   # Slice of Life
+        }
+        genre_id = mood_genre_map_anime.get(mood, "1")
+        url = "https://api.jikan.moe/v4/anime"
+        params = {"genres": genre_id, "order_by": "popularity", "limit": 20}
+        response = requests.get(url, params=params)
+        time.sleep(0.5)
+        return response.json()
+    else:
+        genre_id = mood_genre_map.get(content_type, {}).get(mood, 28)
+        endpoint = "movie" if content_type == "movies" else "tv"
+        url = f"https://api.themoviedb.org/3/discover/{endpoint}"
+        params = {
+            "api_key": TMDB_API_KEY,
+            "with_genres": genre_id,
+            "sort_by": "popularity.desc"
+        }
+        response = requests.get(url, params=params)
+        return response.json()
+
 # ============ FAVORITES ENDPOINTS ============
 
 @app.post("/favorites", response_model=FavoriteResponse)
@@ -136,7 +188,7 @@ def add_favorite(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Check if already favorited
+    # Check if already exists
     existing = db.query(Favorite).filter(
         Favorite.user_id == current_user.id,
         Favorite.content_type == favorite.content_type,
@@ -144,7 +196,7 @@ def add_favorite(
     ).first()
     
     if existing:
-        raise HTTPException(status_code=400, detail="Already in favorites")
+        return existing
     
     new_favorite = Favorite(
         user_id=current_user.id,
@@ -153,6 +205,7 @@ def add_favorite(
         title=favorite.title,
         poster_url=favorite.poster_url
     )
+    
     db.add(new_favorite)
     db.commit()
     db.refresh(new_favorite)
@@ -162,19 +215,34 @@ def add_favorite(
 @app.get("/favorites", response_model=List[FavoriteResponse])
 def get_favorites(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    content_type: Optional[str] = None
+    db: Session = Depends(get_db)
 ):
-    query = db.query(Favorite).filter(Favorite.user_id == current_user.id)
+    favorites = db.query(Favorite).filter(
+        Favorite.user_id == current_user.id
+    ).order_by(Favorite.added_at.desc()).all()
     
-    if content_type:
-        query = query.filter(Favorite.content_type == content_type)
-    
-    favorites = query.order_by(Favorite.added_at.desc()).all()
     return favorites
 
+@app.get("/favorites/check/{content_type}/{content_id}")
+def check_favorite(
+    content_type: str,
+    content_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    favorite = db.query(Favorite).filter(
+        Favorite.user_id == current_user.id,
+        Favorite.content_type == content_type,
+        Favorite.content_id == content_id
+    ).first()
+    
+    return {
+        "is_favorite": favorite is not None,
+        "favorite_id": favorite.id if favorite else None
+    }
+
 @app.delete("/favorites/{favorite_id}")
-def remove_favorite(
+def delete_favorite(
     favorite_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -190,107 +258,7 @@ def remove_favorite(
     db.delete(favorite)
     db.commit()
     
-    return {"message": "Removed from favorites"}
-
-@app.get("/favorites/check/{content_type}/{content_id}")
-def check_favorite(
-    content_type: str,
-    content_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    favorite = db.query(Favorite).filter(
-        Favorite.user_id == current_user.id,
-        Favorite.content_type == content_type,
-        Favorite.content_id == content_id
-    ).first()
-    
-    return {"is_favorite": favorite is not None, "favorite_id": favorite.id if favorite else None}
-
-# ============ EXISTING CONTENT ENDPOINTS ============
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to MediaMingle Backend"}
-
-@app.get("/trending-movies")
-def trending_movies():
-    url = f"https://api.themoviedb.org/3/trending/movie/week"
-    params = {"api_key": TMDB_API_KEY}
-    return requests.get(url, params=params).json()
-
-@app.get("/search-movies")
-def search_movies(query: str = Query(..., min_length=1)):
-    url = "https://api.themoviedb.org/3/search/movie"
-    params = {"api_key": TMDB_API_KEY, "query": query}
-    return requests.get(url, params=params).json()
-
-@app.get("/trending-tv")
-def trending_tv():
-    url = f"https://api.themoviedb.org/3/trending/tv/week"
-    params = {"api_key": TMDB_API_KEY}
-    return requests.get(url, params=params).json()
-
-@app.get("/search-tv")
-def search_tv(query: str = Query(..., min_length=1)):
-    url = "https://api.themoviedb.org/3/search/tv"
-    params = {"api_key": TMDB_API_KEY, "query": query}
-    return requests.get(url, params=params).json()
-
-@app.get("/trending-anime")
-def trending_anime():
-    url = "https://api.jikan.moe/v4/top/anime"
-    params = {"filter": "bypopularity", "limit": 20}
-    response = requests.get(url, params=params).json()
-    return response
-
-@app.get("/search-anime")
-def search_anime(query: str = Query(..., min_length=1)):
-    url = "https://api.jikan.moe/v4/anime"
-    params = {"q": query, "limit": 20}
-    return requests.get(url, params=params).json()
-
-@app.get("/recommend")
-def recommend(mood: str = Query(...), content_type: str = Query("movies")):
-    mood = mood.lower()
-    
-    if mood not in MOOD_TO_GENRE:
-        return {"error": "Invalid mood"}
-    
-    if content_type == "movies":
-        genres = MOOD_TO_GENRE[mood]["movies"]
-        url = "https://api.themoviedb.org/3/discover/movie"
-        params = {
-            "api_key": TMDB_API_KEY,
-            "with_genres": ",".join(map(str, genres)),
-            "sort_by": "popularity.desc",
-            "page": 1
-        }
-        return requests.get(url, params=params).json()
-    
-    elif content_type == "tv":
-        genres = MOOD_TO_GENRE[mood]["tv"]
-        url = "https://api.themoviedb.org/3/discover/tv"
-        params = {
-            "api_key": TMDB_API_KEY,
-            "with_genres": ",".join(map(str, genres)),
-            "sort_by": "popularity.desc",
-            "page": 1
-        }
-        return requests.get(url, params=params).json()
-    
-    elif content_type == "anime":
-        genres = MOOD_TO_GENRE[mood]["anime_genres"]
-        url = "https://api.jikan.moe/v4/anime"
-        params = {
-            "genres": genres[0] if genres else "",
-            "order_by": "popularity",
-            "sort": "asc",
-            "limit": 20
-        }
-        return requests.get(url, params=params).json()
-    
-    return {"error": "Invalid content type"}
+    return {"message": "Favorite removed"}
 
 # ============ HISTORY ENDPOINTS ============
 
@@ -301,7 +269,6 @@ def add_to_history(
     db: Session = Depends(get_db)
 ):
     # Check if already in history (viewed in last 24 hours)
-    from datetime import timedelta
     recent_time = datetime.utcnow() - timedelta(hours=24)
     
     existing = db.query(History).filter(
@@ -357,7 +324,6 @@ def clear_history(
 
 @app.get("/movie/{movie_id}")
 def get_movie_details(movie_id: int):
-    # Get movie details
     url = f"https://api.themoviedb.org/3/movie/{movie_id}"
     params = {
         "api_key": TMDB_API_KEY,
@@ -368,7 +334,6 @@ def get_movie_details(movie_id: int):
 
 @app.get("/tv/{tv_id}")
 def get_tv_details(tv_id: int):
-    # Get TV show details
     url = f"https://api.themoviedb.org/3/tv/{tv_id}"
     params = {
         "api_key": TMDB_API_KEY,
@@ -379,9 +344,9 @@ def get_tv_details(tv_id: int):
 
 @app.get("/anime/{anime_id}")
 def get_anime_details(anime_id: int):
-    # Get anime details from Jikan
     url = f"https://api.jikan.moe/v4/anime/{anime_id}/full"
     response = requests.get(url)
+    time.sleep(0.5)
     return response.json()
 
 # ============ ADVANCED FILTER ENDPOINTS ============
@@ -391,7 +356,7 @@ def discover_movies(
     year_min: int = Query(1900),
     year_max: int = Query(2025),
     rating_min: float = Query(0.0),
-    language: str = Query("en"),
+    language: str = Query(""),
     sort_by: str = Query("popularity.desc"),
     with_genres: str = Query(""),
     page: int = Query(1)
@@ -402,10 +367,12 @@ def discover_movies(
         "primary_release_date.gte": f"{year_min}-01-01",
         "primary_release_date.lte": f"{year_max}-12-31",
         "vote_average.gte": rating_min,
-        "with_original_language": language,
         "sort_by": sort_by,
         "page": page
     }
+    
+    if language:
+        params["with_original_language"] = language
     
     if with_genres:
         params["with_genres"] = with_genres
@@ -418,7 +385,7 @@ def discover_tv(
     year_min: int = Query(1900),
     year_max: int = Query(2025),
     rating_min: float = Query(0.0),
-    language: str = Query("en"),
+    language: str = Query(""),
     sort_by: str = Query("popularity.desc"),
     with_genres: str = Query(""),
     page: int = Query(1)
@@ -429,10 +396,12 @@ def discover_tv(
         "first_air_date.gte": f"{year_min}-01-01",
         "first_air_date.lte": f"{year_max}-12-31",
         "vote_average.gte": rating_min,
-        "with_original_language": language,
         "sort_by": sort_by,
         "page": page
     }
+    
+    if language:
+        params["with_original_language"] = language
     
     if with_genres:
         params["with_genres"] = with_genres
@@ -440,181 +409,80 @@ def discover_tv(
     response = requests.get(url, params=params)
     return response.json()
 
-# ============ ANILIST API FOR BETTER ANIME ============
+# ============ JIKAN API FOR ANIME FILTERING ============
 
 @app.get("/discover-anime")
 def discover_anime(
     year_min: int = Query(1960),
     year_max: int = Query(2025),
-    rating_min: int = Query(0),
-    season: str = Query(None),
+    rating_min: float = Query(0.0),
     genre: str = Query(None),
-    sort_by: str = Query("POPULARITY_DESC"),
+    sort_by: str = Query("popularity"),
     page: int = Query(1)
 ):
     """
-    Use AniList GraphQL API for better anime discovery
-    """
-    url = "https://graphql.anilist.co"
-    
-    # Build genre filter - AniList accepts genre as array
-    genre_filter = f'genre_in: ["{genre}"]' if genre else ''
-    
-    # Build GraphQL query dynamically
-    query = f"""
-    query {{
-      Page(page: {page}, perPage: 20) {{
-        media(
-          type: ANIME,
-          seasonYear_greater: {year_min - 1},
-          seasonYear_lesser: {year_max + 1},
-          averageScore_greater: {rating_min},
-          {f'season: {season},' if season else ''}
-          {genre_filter}
-          sort: {sort_by}
-        ) {{
-          id
-          title {{
-            english
-            romaji
-          }}
-          coverImage {{
-            large
-            extraLarge
-          }}
-          bannerImage
-          averageScore
-          seasonYear
-          episodes
-          format
-          genres
-          description
-          trailer {{
-            id
-            site
-          }}
-        }}
-      }}
-    }}
-    """
-    
-    try:
-        response = requests.post(url, json={"query": query})
-        return response.json()
-    except Exception as e:
-        return {"error": str(e), "data": {"Page": {"media": []}}}
-
-
-@app.get("/anime-anilist/{anime_id}")
-def get_anime_anilist_details(anime_id: int):
-    """
-    Get detailed anime info from AniList
-    """
-    url = "https://graphql.anilist.co"
-    
-    query = """
-    query ($id: Int) {
-      Media(id: $id, type: ANIME) {
-        id
-        title {
-          english
-          romaji
-          native
-        }
-        coverImage {
-          large
-          extraLarge
-        }
-        bannerImage
-        description
-        averageScore
-        seasonYear
-        season
-        episodes
-        duration
-        format
-        status
-        genres
-        studios {
-          nodes {
-            name
-          }
-        }
-        characters(sort: ROLE) {
-          edges {
-            role
-            node {
-              name {
-                full
-              }
-              image {
-                large
-              }
-            }
-          }
-        }
-        trailer {
-          id
-          site
-        }
-        recommendations(sort: RATING_DESC) {
-          nodes {
-            mediaRecommendation {
-              id
-              title {
-                english
-                romaji
-              }
-              coverImage {
-                large
-              }
-              averageScore
-            }
-          }
-        }
-      }
-    }
-    """
-    
-    variables = {"id": anime_id}
-    
-    response = requests.post(url, json={"query": query, "variables": variables})
-    return response.json()
-
-@app.get("/anime-by-genre")
-def get_anime_by_genre(genre: str = Query(...)):
-    """
-    Fallback: Use Jikan API to filter anime by genre
+    Use Jikan API for anime discovery with filters
     """
     # Jikan genre mapping
-    genre_ids = {
-        "Action": 1,
-        "Adventure": 2,
-        "Comedy": 4,
-        "Drama": 8,
-        "Fantasy": 10,
-        "Horror": 14,
-        "Mystery": 7,
-        "Psychological": 40,
-        "Romance": 22,
-        "Sci-Fi": 24,
-        "Slice of Life": 36,
-        "Sports": 30,
-        "Supernatural": 37,
-        "Thriller": 41
+    genre_map = {
+        "Action": "1",
+        "Adventure": "2",
+        "Comedy": "4",
+        "Drama": "8",
+        "Fantasy": "10",
+        "Horror": "14",
+        "Mystery": "7",
+        "Psychological": "40",
+        "Romance": "22",
+        "Sci-Fi": "24",
+        "Slice of Life": "36",
+        "Sports": "30",
+        "Supernatural": "37",
+        "Thriller": "41",
+        "Shounen": "27"
     }
     
-    genre_id = genre_ids.get(genre, 1)
-    url = f"https://api.jikan.moe/v4/anime?genres={genre_id}&order_by=popularity&sort=asc&limit=20"
+    # Jikan sort mapping
+    sort_map = {
+        "POPULARITY_DESC": "popularity",
+        "SCORE_DESC": "score",
+        "START_DATE_DESC": "start_date",
+        "START_DATE": "start_date",
+        "TITLE_ROMAJI": "title",
+        "popularity.desc": "popularity",
+        "vote_average.desc": "score"
+    }
+    
+    url = "https://api.jikan.moe/v4/anime"
+    params = {
+        "order_by": sort_map.get(sort_by, "popularity"),
+        "sort": "desc",
+        "limit": 20,
+        "page": page
+    }
+    
+    if rating_min > 0:
+        params["min_score"] = rating_min
+    
+    # Add genre filter if specified
+    if genre:
+        genre_id = genre_map.get(genre)
+        if genre_id:
+            params["genres"] = genre_id
     
     try:
-        response = requests.get(url)
-        time.sleep(0.5)  # Rate limit
-        return response.json()
+        response = requests.get(url, params=params)
+        time.sleep(0.5)  # Rate limit for Jikan
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"data": []}
     except Exception as e:
-        return {"error": str(e), "data": []}
+        print(f"Jikan API error: {e}")
+        return {"data": []}
 
-# Genre mappings for TMDb
+# Genre lists
 @app.get("/movie-genres")
 def get_movie_genres():
     url = "https://api.themoviedb.org/3/genre/movie/list"
@@ -626,3 +494,8 @@ def get_tv_genres():
     url = "https://api.themoviedb.org/3/genre/tv/list"
     params = {"api_key": TMDB_API_KEY}
     return requests.get(url, params=params).json()
+
+# Health check
+@app.get("/")
+def read_root():
+    return {"status": "MediaMingle API is running!"}
