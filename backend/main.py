@@ -989,13 +989,16 @@ def update_profile(
 # ============ TEMPORARY: DATABASE MIGRATION ============
 # Run this ONCE to add new columns to existing users table
 
-@app.post("/admin/migrate-database")
+@app.get("/admin/migrate-database")  # ← Changed from POST to GET
 def migrate_database(db: Session = Depends(get_db)):
     """
     Temporary endpoint to add new columns to users table
     DELETE THIS ENDPOINT after running once!
     """
     try:
+        # Import text from sqlalchemy
+        from sqlalchemy import text
+        
         # Raw SQL to add new columns
         sql_commands = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR;",
@@ -1005,7 +1008,7 @@ def migrate_database(db: Session = Depends(get_db)):
         ]
         
         for sql in sql_commands:
-            db.execute(sql)
+            db.execute(text(sql))
         
         db.commit()
         
