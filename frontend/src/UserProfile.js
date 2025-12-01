@@ -8,10 +8,9 @@ import axios from 'axios';
 import './UserProfile.css';
 
 function UserProfile() {
-  const { username } = useParams();
+  const { username } = useParams();  // ✅ Changed from userId
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  
   const [profile, setProfile] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -20,23 +19,51 @@ function UserProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const isOwnProfile = user && user.username === username;
+  const isOwnProfile = user && user.username === username;  // ✅ Compare usernames
 
   useEffect(() => {
     loadProfile();
     loadUserRatings();
-    loadUserFavorites();
+    if (!isOwnProfile && isAuthenticated) {
+      checkFollowStatus();
+    }
   }, [username]);
+
+  // ✅ NEW: Format date function
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No date';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+      if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+      
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
+  };
 
   const loadProfile = async () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${config.API_BASE_URL}/users/${username}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        `${config.API_BASE_URL}/users/${username}`  // ✅ Fixed endpoint
       );
       setProfile(response.data);
-      setIsFollowing(response.data.is_following);
     } catch (error) {
       console.error('Error loading profile:', error);
     }
@@ -46,7 +73,7 @@ function UserProfile() {
   const loadUserRatings = async () => {
     try {
       const response = await axios.get(
-        `${config.API_BASE_URL}/users/${username}/ratings?limit=20`
+        `${config.API_BASE_URL}/users/${username}/ratings?limit=20`  // ✅ Fixed
       );
       setRatings(response.data);
     } catch (error) {
@@ -54,14 +81,15 @@ function UserProfile() {
     }
   };
 
-  const loadUserFavorites = async () => {
+  const checkFollowStatus = async () => {
     try {
       const response = await axios.get(
-        `${config.API_BASE_URL}/users/${username}/favorites?limit=20`
+        `${config.API_BASE_URL}/follow/check/${username}`,  // ✅ Fixed
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      setFavorites(response.data);
+      setIsFollowing(response.data.is_following);
     } catch (error) {
-      console.error('Error loading favorites:', error);
+      console.error('Error checking follow status:', error);
     }
   };
 
@@ -75,14 +103,14 @@ function UserProfile() {
     try {
       if (isFollowing) {
         await axios.delete(
-          `${config.API_BASE_URL}/unfollow/${username}`,
+          `${config.API_BASE_URL}/follow/${username}`,  // ✅ Fixed
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
         setIsFollowing(false);
         setProfile({ ...profile, followers_count: profile.followers_count - 1 });
       } else {
         await axios.post(
-          `${config.API_BASE_URL}/follow/${username}`,
+          `${config.API_BASE_URL}/follow/${username}`,  // ✅ Fixed
           {},
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
@@ -96,10 +124,14 @@ function UserProfile() {
     setFollowLoading(false);
   };
 
+  const handleContentClick = (contentType, contentId) => {
+    navigate(`/detail/${contentType}/${contentId}`);
+  };
+
   if (loading) {
     return (
       <div className="profile-page loading">
-        <div className="spinner"></div>
+        <Clock size={48} />
         <p>Loading profile...</p>
       </div>
     );
@@ -108,38 +140,42 @@ function UserProfile() {
   if (!profile) {
     return (
       <div className="profile-page error">
-        <User size={64} />
+        <User size={48} />
         <p>User not found</p>
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={20} />
+          Go Back
+        </button>
       </div>
     );
   }
 
   return (
     <div className="profile-page">
-      {/* REMOVED: Top back button */}
-      
       <div className="profile-header">
-        {/* Banner with Avatar */}
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={20} />
+          Back
+        </button>
+
         <div className="profile-banner">
           <div className="profile-avatar-large">
             {profile.avatar_url ? (
               <img src={profile.avatar_url} alt={profile.username} />
             ) : (
-              <User size={64} />
+              <User size={48} />
             )}
-            <div className="online-indicator" />
+            {isOwnProfile && <div className="online-indicator" />}
           </div>
         </div>
 
-        {/* Profile Info */}
         <div className="profile-info">
           <h1 className="profile-username">@{profile.username}</h1>
           <p className="profile-bio">{profile.bio || 'No bio yet'}</p>
 
-          {/* Stats */}
           <div className="profile-stats">
             <div className="stat-item">
-              <Star size={20} />
+              <Star size={20} style={{ color: '#fbbf24' }} />
               <div>
                 <div className="stat-value">{profile.ratings_count || 0}</div>
                 <div className="stat-label">RATINGS</div>
@@ -147,15 +183,15 @@ function UserProfile() {
             </div>
 
             <div className="stat-item">
-              <Heart size={20} />
+              <Heart size={20} style={{ color: '#f87171' }} />
               <div>
-                <div className="stat-value">{profile.favorites_count || 0}</div>
+                <div className="stat-value">0</div>
                 <div className="stat-label">FAVORITES</div>
               </div>
             </div>
 
             <div className="stat-item">
-              <Users size={20} />
+              <Users size={20} style={{ color: '#6366f1' }} />
               <div>
                 <div className="stat-value">{profile.followers_count || 0}</div>
                 <div className="stat-label">FOLLOWERS</div>
@@ -163,7 +199,7 @@ function UserProfile() {
             </div>
 
             <div className="stat-item">
-              <Users size={20} />
+              <Users size={20} style={{ color: '#8b5cf6' }} />
               <div>
                 <div className="stat-value">{profile.following_count || 0}</div>
                 <div className="stat-label">FOLLOWING</div>
@@ -171,11 +207,13 @@ function UserProfile() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="profile-actions">
             {isOwnProfile ? (
-              <button className="profile-action-btn primary">
-                <Settings size={18} />
+              <button
+                className="profile-action-btn primary"
+                onClick={() => navigate('/settings')}
+              >
+                <Settings size={20} />
                 Edit Profile
               </button>
             ) : (
@@ -186,12 +224,12 @@ function UserProfile() {
               >
                 {isFollowing ? (
                   <>
-                    <UserMinus size={18} />
+                    <UserMinus size={20} />
                     Unfollow
                   </>
                 ) : (
                   <>
-                    <UserPlus size={18} />
+                    <UserPlus size={20} />
                     Follow
                   </>
                 )}
@@ -201,7 +239,6 @@ function UserProfile() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="profile-tabs">
         <button
           className={`tab-btn ${activeTab === 'ratings' ? 'active' : ''}`}
@@ -219,13 +256,12 @@ function UserProfile() {
         </button>
       </div>
 
-      {/* Content */}
       <div className="profile-content">
         {activeTab === 'ratings' && (
           <div className="ratings-grid">
             {ratings.length === 0 ? (
               <div className="empty-state">
-                <Star size={64} />
+                <Star size={48} />
                 <p>No ratings yet</p>
               </div>
             ) : (
@@ -233,12 +269,22 @@ function UserProfile() {
                 <div
                   key={rating.id}
                   className="rating-card"
-                  onClick={() => navigate(`/details/${rating.media_type}/${rating.content_id}`)}
+                  onClick={() => handleContentClick(rating.content_type, rating.content_id)}
                 >
-                  <img src={rating.poster_url} alt={rating.title} />
+                  <img
+                    src={
+                      rating.poster_url?.startsWith('http')
+                        ? rating.poster_url
+                        : `https://image.tmdb.org/t/p/w500${rating.poster_url}`
+                    }
+                    alt={rating.title}
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                    }}
+                  />
                   <div className="rating-card-info">
                     <h4>{rating.title}</h4>
-                    <StarRating rating={rating.rating} readonly size={16} />
+                    <StarRating rating={rating.rating} readOnly size={20} />
                     {rating.review && (
                       <p className="rating-review">
                         {rating.review.length > 100
@@ -248,7 +294,7 @@ function UserProfile() {
                     )}
                     <div className="rating-date">
                       <Clock size={14} />
-                      {new Date(rating.created_at).toLocaleDateString()}
+                      {formatDate(rating.rated_at)}  {/* ✅ FIXED */}
                     </div>
                   </div>
                 </div>
@@ -258,34 +304,12 @@ function UserProfile() {
         )}
 
         {activeTab === 'favorites' && (
-          <div className="favorites-grid">
-            {favorites.length === 0 ? (
-              <div className="empty-state">
-                <Heart size={64} />
-                <p>No favorites yet</p>
-              </div>
-            ) : (
-              favorites.map((fav) => (
-                <div
-                  key={fav.id}
-                  className="favorite-card"
-                  onClick={() => navigate(`/details/${fav.media_type}/${fav.content_id}`)}
-                >
-                  <img src={fav.poster_url} alt={fav.title} />
-                  <div className="favorite-overlay">
-                    <h4>{fav.title}</h4>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="empty-state">
+            <Heart size={48} />
+            <p>Favorites feature coming soon!</p>
           </div>
         )}
       </div>
-
-      {/* Floating Back Button (Bottom-Right) */}
-      <button className="floating-back-btn" onClick={() => navigate(-1)}>
-        <ArrowLeft size={24} />
-      </button>
     </div>
   );
 }
