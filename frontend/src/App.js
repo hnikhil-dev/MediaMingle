@@ -12,6 +12,7 @@ import BooksPage from './BooksPage';
 import GamesPage from './GamesPage';
 import ProfilePage from './ProfilePage';
 import MyRatings from './MyRatings';
+import UserProfile from './UserProfile';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 function AppContent() {
@@ -213,6 +214,7 @@ function AppContent() {
           <Route path="/favorites" element={<HomePage />} />
           <Route path="/history" element={<HomePage />} />
           <Route path="/my-ratings" element={<MyRatings />} />
+          <Route path="/user/:userId" element={<UserProfile />} />
         </Routes>
       </main>
 
