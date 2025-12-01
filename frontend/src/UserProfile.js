@@ -11,7 +11,7 @@ function UserProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-
+  
   const [profile, setProfile] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -108,21 +108,18 @@ function UserProfile() {
   if (!profile) {
     return (
       <div className="profile-page error">
+        <User size={64} />
         <p>User not found</p>
-        <button onClick={() => navigate(-1)}>Go Back</button>
       </div>
     );
   }
 
   return (
     <div className="profile-page">
-      {/* Header */}
+      {/* REMOVED: Top back button */}
+      
       <div className="profile-header">
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          <ArrowLeft size={20} />
-          Back
-        </button>
-
+        {/* Banner with Avatar */}
         <div className="profile-banner">
           <div className="profile-avatar-large">
             {profile.avatar_url ? (
@@ -130,41 +127,55 @@ function UserProfile() {
             ) : (
               <User size={64} />
             )}
-            {profile.is_online && <div className="online-indicator"></div>}
+            <div className="online-indicator" />
           </div>
         </div>
 
+        {/* Profile Info */}
         <div className="profile-info">
           <h1 className="profile-username">@{profile.username}</h1>
-          {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+          <p className="profile-bio">{profile.bio || 'No bio yet'}</p>
 
+          {/* Stats */}
           <div className="profile-stats">
             <div className="stat-item">
-              <Star size={20} fill="#fbbf24" stroke="#fbbf24" />
-              <span className="stat-value">{profile.ratings_count}</span>
-              <span className="stat-label">Ratings</span>
+              <Star size={20} />
+              <div>
+                <div className="stat-value">{profile.ratings_count || 0}</div>
+                <div className="stat-label">RATINGS</div>
+              </div>
             </div>
+
             <div className="stat-item">
-              <Heart size={20} fill="#f87171" stroke="#f87171" />
-              <span className="stat-value">{profile.favorites_count}</span>
-              <span className="stat-label">Favorites</span>
+              <Heart size={20} />
+              <div>
+                <div className="stat-value">{profile.favorites_count || 0}</div>
+                <div className="stat-label">FAVORITES</div>
+              </div>
             </div>
+
             <div className="stat-item">
               <Users size={20} />
-              <span className="stat-value">{profile.followers_count}</span>
-              <span className="stat-label">Followers</span>
+              <div>
+                <div className="stat-value">{profile.followers_count || 0}</div>
+                <div className="stat-label">FOLLOWERS</div>
+              </div>
             </div>
+
             <div className="stat-item">
               <Users size={20} />
-              <span className="stat-value">{profile.following_count}</span>
-              <span className="stat-label">Following</span>
+              <div>
+                <div className="stat-value">{profile.following_count || 0}</div>
+                <div className="stat-label">FOLLOWING</div>
+              </div>
             </div>
           </div>
 
+          {/* Actions */}
           <div className="profile-actions">
             {isOwnProfile ? (
-              <button className="profile-action-btn primary" onClick={() => navigate('/settings')}>
-                <Settings size={20} />
+              <button className="profile-action-btn primary">
+                <Settings size={18} />
                 Edit Profile
               </button>
             ) : (
@@ -175,12 +186,12 @@ function UserProfile() {
               >
                 {isFollowing ? (
                   <>
-                    <UserMinus size={20} />
+                    <UserMinus size={18} />
                     Unfollow
                   </>
                 ) : (
                   <>
-                    <UserPlus size={20} />
+                    <UserPlus size={18} />
                     Follow
                   </>
                 )}
@@ -214,7 +225,7 @@ function UserProfile() {
           <div className="ratings-grid">
             {ratings.length === 0 ? (
               <div className="empty-state">
-                <Star size={48} />
+                <Star size={64} />
                 <p>No ratings yet</p>
               </div>
             ) : (
@@ -222,19 +233,23 @@ function UserProfile() {
                 <div
                   key={rating.id}
                   className="rating-card"
-                  onClick={() => navigate(`/${rating.content_type}/${rating.content_id}`)}
+                  onClick={() => navigate(`/details/${rating.media_type}/${rating.content_id}`)}
                 >
                   <img src={rating.poster_url} alt={rating.title} />
                   <div className="rating-card-info">
                     <h4>{rating.title}</h4>
-                    <StarRating rating={rating.rating} size={20} maxRating={10} readonly />
+                    <StarRating rating={rating.rating} readonly size={16} />
                     {rating.review && (
-                      <p className="rating-review">{rating.review.slice(0, 100)}...</p>
+                      <p className="rating-review">
+                        {rating.review.length > 100
+                          ? `${rating.review.slice(0, 100)}...`
+                          : rating.review}
+                      </p>
                     )}
-                    <span className="rating-date">
+                    <div className="rating-date">
                       <Clock size={14} />
-                      {new Date(rating.rated_at).toLocaleDateString()}
-                    </span>
+                      {new Date(rating.created_at).toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
               ))
@@ -246,7 +261,7 @@ function UserProfile() {
           <div className="favorites-grid">
             {favorites.length === 0 ? (
               <div className="empty-state">
-                <Heart size={48} />
+                <Heart size={64} />
                 <p>No favorites yet</p>
               </div>
             ) : (
@@ -254,7 +269,7 @@ function UserProfile() {
                 <div
                   key={fav.id}
                   className="favorite-card"
-                  onClick={() => navigate(`/${fav.content_type}/${fav.content_id}`)}
+                  onClick={() => navigate(`/details/${fav.media_type}/${fav.content_id}`)}
                 >
                   <img src={fav.poster_url} alt={fav.title} />
                   <div className="favorite-overlay">
@@ -267,7 +282,7 @@ function UserProfile() {
         )}
       </div>
 
-      {/* Floating Back Button */}
+      {/* Floating Back Button (Bottom-Right) */}
       <button className="floating-back-btn" onClick={() => navigate(-1)}>
         <ArrowLeft size={24} />
       </button>
