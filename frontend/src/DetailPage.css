@@ -64,29 +64,72 @@
   padding: 40px 40px 60px;
 }
 
-/* Back Button */
+/* Back Button - CIRCULAR FLOATING */
 .back-button {
-  display: inline-flex;
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 100;
+  width: 56px;
+  height: 56px;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(30, 41, 59, 0.8);
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.95);
   backdrop-filter: blur(10px);
-  border: 2px solid #334155;
-  border-radius: 10px;
-  color: #cbd5e1;
-  font-size: 14px;
-  font-weight: 600;
+  border: 2px solid #818cf8;
+  border-radius: 50%;
+  color: white;
+  font-size: 0;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-bottom: 40px;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+}
+
+.back-button svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5;
 }
 
 .back-button:hover {
-  background: rgba(51, 65, 85, 0.9);
-  border-color: #475569;
-  color: #f1f5f9;
-  transform: translateX(-4px);
+  background: rgba(79, 70, 229, 1);
+  border-color: #a5b4fc;
+  transform: translateY(-4px) scale(1.1);
+  box-shadow: 0 12px 32px rgba(99, 102, 241, 0.6);
+}
+
+.back-button:active {
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Show text on hover (optional) */
+.back-button:hover::after {
+  content: 'Back';
+  position: absolute;
+  right: 70px;
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .back-button {
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .back-button:hover::after {
+    display: none;
+  }
 }
 
 /* ========================================
