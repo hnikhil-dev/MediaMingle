@@ -55,13 +55,13 @@
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 16px 16px 0 0;
   position: relative;
-  margin-bottom: 80px;
+  margin-bottom: 0;  /* ← CHANGED: Remove extra margin */
 }
 
 /* Avatar - CENTERED */
 .profile-avatar-large {
   position: absolute;
-  bottom: -70px;
+  bottom: -70px;  /* ← Overlaps banner and info section */
   left: 50%;
   transform: translateX(-50%);
   width: 140px;
@@ -112,8 +112,8 @@
   backdrop-filter: blur(10px);
   border: 2px solid #334155;
   border-radius: 0 0 16px 16px;
-  padding: 24px 40px 32px;
-  margin-top: -16px;
+  padding: 90px 40px 32px; 
+  margin-top: 0; 
   text-align: center;
 }
 
@@ -435,7 +435,7 @@
 
   .profile-banner {
     height: 120px;
-    margin-bottom: 60px;
+    margin-bottom: 0;
   }
 
   .profile-avatar-large {
@@ -445,7 +445,7 @@
   }
 
   .profile-info {
-    padding: 80px 20px 24px;
+    padding: 70px 20px 24px;
   }
 
   .profile-stats {
