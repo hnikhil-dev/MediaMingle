@@ -986,6 +986,40 @@ def update_profile(
     
     return {"message": "Profile updated", "user": current_user}
 
+# ============ TEMPORARY: DATABASE MIGRATION ============
+# Run this ONCE to add new columns to existing users table
+
+@app.post("/admin/migrate-database")
+def migrate_database(db: Session = Depends(get_db)):
+    """
+    Temporary endpoint to add new columns to users table
+    DELETE THIS ENDPOINT after running once!
+    """
+    try:
+        # Raw SQL to add new columns
+        sql_commands = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT FALSE;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT NOW();"
+        ]
+        
+        for sql in sql_commands:
+            db.execute(sql)
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Database migrated successfully! New columns added to users table."
+        }
+    except Exception as e:
+        db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # Health check
 @app.get("/")
 def read_root():
