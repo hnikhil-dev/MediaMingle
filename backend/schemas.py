@@ -1,6 +1,8 @@
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
 from typing import Optional
+from datetime import datetime
+
+# ====================== USER SCHEMAS ======================
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -15,15 +17,36 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserPublicProfile(BaseModel):
+    id: int
+    username: str
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    created_at: datetime
+    followers_count: int
+    following_count: int
+    ratings_count: int
     
     class Config:
         from_attributes = True
+
+class UserUpdateProfile(BaseModel):
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+# ====================== EXISTING SCHEMAS ======================
 
 class FavoriteCreate(BaseModel):
     content_type: str
@@ -38,11 +61,10 @@ class FavoriteResponse(BaseModel):
     title: str
     poster_url: Optional[str]
     added_at: datetime
-    
+
     class Config:
         from_attributes = True
 
-# NEW: History Schemas
 class HistoryCreate(BaseModel):
     content_type: str
     content_id: str
@@ -56,11 +78,10 @@ class HistoryResponse(BaseModel):
     title: str
     poster_url: Optional[str]
     viewed_at: datetime
-    
+
     class Config:
         from_attributes = True
 
-# Rating Schemas
 class RatingCreate(BaseModel):
     content_type: str
     content_id: str
@@ -75,7 +96,6 @@ class RatingUpdate(BaseModel):
 
 class RatingResponse(BaseModel):
     id: int
-    user_id: int
     content_type: str
     content_id: str
     title: str
@@ -87,53 +107,41 @@ class RatingResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Follow Schemas
-class FollowCreate(BaseModel):
-    following_id: int
+# ====================== NEW: SOCIAL SCHEMAS ======================
 
 class FollowResponse(BaseModel):
     id: int
     follower_id: int
     following_id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
-# User Profile (Public View)
-class UserProfile(BaseModel):
+class FollowerDetail(BaseModel):
     id: int
     username: str
-    bio: Optional[str]
-    avatar_url: Optional[str]
-    created_at: datetime
-    is_online: bool
-    
-    # Stats
-    followers_count: int
-    following_count: int
-    ratings_count: int
-    favorites_count: int
-    
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    followed_at: datetime
+
     class Config:
         from_attributes = True
 
-# Activity Feed Schema
 class ActivityResponse(BaseModel):
     id: int
     user_id: int
     username: str
-    avatar_url: Optional[str]
+    avatar_url: Optional[str] = None
     activity_type: str
-    content_type: Optional[str]
-    content_id: Optional[str]
-    content_title: Optional[str]
-    content_poster: Optional[str]
-    rating_value: Optional[float]
-    review_text: Optional[str]
-    target_user_id: Optional[int]
-    target_username: Optional[str]
+    content_type: Optional[str] = None
+    content_id: Optional[str] = None
+    content_title: Optional[str] = None
+    content_poster: Optional[str] = None
+    rating_value: Optional[float] = None
+    target_user_id: Optional[int] = None
+    target_username: Optional[str] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
