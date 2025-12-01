@@ -889,6 +889,7 @@ body {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-top: 1px solid #334155;
   margin-top: 60px;
+  margin-left: 180px; /* ← ADD THIS: Match sidebar width */
   padding: 48px 24px 24px;
 }
 
@@ -972,6 +973,14 @@ body {
   color: #64748b;
   font-size: 14px;
 }
+
+/* ← ADD THIS: Mobile responsive */
+@media (max-width: 768px) {
+  .app-footer {
+    margin-left: 0; /* Remove left margin on mobile */
+  }
+}
+
 
 /* ============ TELEGRAM-STYLE MOBILE UI ============ */
 @media (max-width: 768px) {
