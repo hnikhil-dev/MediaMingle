@@ -8,8 +8,8 @@ function ProfilePage() {
 
   useEffect(() => {
     // Redirect to UserProfile page
-    if (isAuthenticated && user?.id) {
-      navigate(`/user/${user.id}`, { replace: true });
+    if (isAuthenticated && user?.username) {
+      navigate(`/user/${user.username}`, { replace: true });
     } else {
       // If not authenticated, redirect to login
       navigate('/?auth=login', { replace: true });

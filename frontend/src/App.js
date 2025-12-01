@@ -215,7 +215,7 @@ function AppContent() {
           <Route path="/favorites" element={<HomePage />} />
           <Route path="/history" element={<HomePage />} />
           <Route path="/my-ratings" element={<MyRatings />} />
-          <Route path="/user/:userId" element={<UserProfile />} />
+          <Route path="/user/:username" element={<UserProfile />} />
           <Route path="/user/:username" element={<PublicProfile />} />
           <Route path="/users/:username" element={<PublicProfile />} />
         </Routes>

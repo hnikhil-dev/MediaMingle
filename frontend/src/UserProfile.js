@@ -8,7 +8,7 @@ import axios from 'axios';
 import './UserProfile.css';
 
 function UserProfile() {
-  const { userId } = useParams();
+  const { username } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   
@@ -20,19 +20,19 @@ function UserProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const isOwnProfile = user && user.id === parseInt(userId);
+  const isOwnProfile = user && user.username === username;
 
   useEffect(() => {
     loadProfile();
     loadUserRatings();
     loadUserFavorites();
-  }, [userId]);
+  }, [username]);
 
   const loadProfile = async () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${config.API_BASE_URL}/users/${userId}/profile`,
+        `${config.API_BASE_URL}/users/${username}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       setProfile(response.data);
@@ -46,7 +46,7 @@ function UserProfile() {
   const loadUserRatings = async () => {
     try {
       const response = await axios.get(
-        `${config.API_BASE_URL}/users/${userId}/ratings?limit=20`
+        `${config.API_BASE_URL}/users/${username}/ratings?limit=20`
       );
       setRatings(response.data);
     } catch (error) {
@@ -57,7 +57,7 @@ function UserProfile() {
   const loadUserFavorites = async () => {
     try {
       const response = await axios.get(
-        `${config.API_BASE_URL}/users/${userId}/favorites?limit=20`
+        `${config.API_BASE_URL}/users/${username}/favorites?limit=20`
       );
       setFavorites(response.data);
     } catch (error) {
@@ -75,14 +75,14 @@ function UserProfile() {
     try {
       if (isFollowing) {
         await axios.delete(
-          `${config.API_BASE_URL}/unfollow/${userId}`,
+          `${config.API_BASE_URL}/unfollow/${username}`,
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
         setIsFollowing(false);
         setProfile({ ...profile, followers_count: profile.followers_count - 1 });
       } else {
         await axios.post(
-          `${config.API_BASE_URL}/follow/${userId}`,
+          `${config.API_BASE_URL}/follow/${username}`,
           {},
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
