@@ -13,6 +13,7 @@ import GamesPage from './GamesPage';
 import ProfilePage from './ProfilePage';
 import MyRatings from './MyRatings';
 import UserProfile from './UserProfile';
+import PublicProfile from './PublicProfile';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 function AppContent() {
@@ -215,6 +216,8 @@ function AppContent() {
           <Route path="/history" element={<HomePage />} />
           <Route path="/my-ratings" element={<MyRatings />} />
           <Route path="/user/:userId" element={<UserProfile />} />
+          <Route path="/user/:username" element={<PublicProfile />} />
+          <Route path="/users/:username" element={<PublicProfile />} />
         </Routes>
       </main>
 
