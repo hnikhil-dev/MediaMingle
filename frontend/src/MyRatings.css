@@ -189,10 +189,10 @@
   background: rgba(51, 65, 85, 0.5);
 }
 
-/* Ratings Grid */
+/* Ratings Grid - FIXED */
 .ratings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 24px;
 }
 
@@ -202,6 +202,8 @@
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .rating-card:hover {
@@ -210,18 +212,22 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 
+/* FIXED: Poster Section */
 .rating-card-poster {
   position: relative;
   width: 100%;
-  height: 380px;
+  height: 320px; /* ← REDUCED from 380px */
   cursor: pointer;
   overflow: hidden;
+  flex-shrink: 0; /* ← ADDED: Prevent shrinking */
 }
 
 .rating-card-poster img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top; /* ← ADDED: Align to top */
+  display: block; /* ← ADDED: Remove inline spacing */
   transition: transform 0.3s ease;
 }
 
@@ -261,21 +267,26 @@
   color: #fbbf24;
 }
 
+/* FIXED: Content Section */
 .rating-card-content {
-  padding: 20px;
+  padding: 16px; /* ← REDUCED from 20px */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .rating-card-content h3 {
-  font-size: 18px;
+  font-size: 16px; /* ← REDUCED from 18px */
   font-weight: 700;
   color: #f1f5f9;
-  margin: 0 0 12px 0;
+  margin: 0 0 10px 0; /* ← REDUCED margin */
   cursor: pointer;
   transition: color 0.2s ease;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.3;
 }
 
 .rating-card-content h3:hover {
@@ -283,16 +294,16 @@
 }
 
 .rating-display {
-  margin-bottom: 12px;
+  margin-bottom: 10px; /* ← REDUCED from 12px */
 }
 
 .rating-review {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px; /* ← REDUCED from 14px */
+  line-height: 1.5;
   color: #94a3b8;
-  margin: 12px 0;
+  margin: 10px 0; /* ← REDUCED from 12px */
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2; /* ← REDUCED from 3 */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -301,34 +312,36 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 16px 0;
-  padding-top: 16px;
+  margin: 12px 0; /* ← REDUCED from 16px */
+  padding-top: 12px; /* ← REDUCED from 16px */
   border-top: 1px solid #334155;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .content-type-badge {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 4px 10px; /* ← REDUCED padding */
   background: rgba(99, 102, 241, 0.1);
   border: 1px solid #6366f1;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 11px; /* ← REDUCED from 12px */
   font-weight: 600;
   color: #a5b4fc;
   text-transform: capitalize;
 }
 
 .rated-date {
-  font-size: 12px;
+  font-size: 11px; /* ← REDUCED from 12px */
   color: #64748b;
 }
 
 .rating-actions {
   display: flex;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 12px; /* ← REDUCED from 16px */
 }
 
 .action-btn {
@@ -337,10 +350,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px;
+  padding: 8px; /* ← REDUCED from 10px */
   border: none;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 12px; /* ← REDUCED from 13px */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
