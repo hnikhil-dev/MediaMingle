@@ -11,6 +11,7 @@ import MusicPage from './MusicPage';
 import BooksPage from './BooksPage';
 import GamesPage from './GamesPage';
 import ProfilePage from './ProfilePage';
+import MyRatings from './MyRatings';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 function AppContent() {
@@ -211,6 +212,7 @@ function AppContent() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/favorites" element={<HomePage />} />
           <Route path="/history" element={<HomePage />} />
+          <Route path="/my-ratings" element={<MyRatings />} />
         </Routes>
       </main>
 

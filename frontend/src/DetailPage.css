@@ -599,3 +599,148 @@
   }
 }
 
+/* Rating Button */
+.rate-btn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border: 2px solid #fcd34d;
+  color: #0f172a;
+}
+
+.rate-btn:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #fde047;
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4);
+}
+
+.rate-btn.rated {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-color: #a78bfa;
+  color: white;
+}
+
+/* User Rating Section */
+.user-rating-section {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 32px 0;
+}
+
+.user-rating-section h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-rating-display {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-review {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  font-style: italic;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.5);
+  border-left: 4px solid #8b5cf6;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.edit-rating-btn {
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 2px solid #8b5cf6;
+  border-radius: 10px;
+  color: #c4b5fd;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-rating-btn:hover {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: #a78bfa;
+  color: #e9d5ff;
+  transform: translateY(-2px);
+}
+
+/* Ratings Comparison */
+.ratings-comparison {
+  display: flex;
+  gap: 16px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+
+.rating-box {
+  flex: 1;
+  min-width: 200px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 2px solid #334155;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rating-box.user-rating-box {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+  border-color: #8b5cf6;
+}
+
+.rating-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rating-value {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.user-rating-box .rating-value {
+  color: #c4b5fd;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ratings-comparison {
+    flex-direction: column;
+  }
+
+  .rating-box {
+    min-width: 100%;
+  }
+
+  .user-rating-section {
+    padding: 16px;
+    margin: 20px 0;
+  }
+
+  .detail-actions {
+    flex-direction: column;
+  }
+
+  .rate-btn {
+    width: 100%;
+  }
+}

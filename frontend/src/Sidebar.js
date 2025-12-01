@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ContextMenu from './ContextMenu';
-import { Film, Tv, TrendingUp, Music, BookOpen, Gamepad2, User, Heart, Clock, LogOut, Home, Copy, ExternalLink, Check } from 'lucide-react';
+import { Film, Tv, TrendingUp, Music, BookOpen, Gamepad2, User, Heart, Clock, LogOut, Home, Copy, ExternalLink, Check, Star } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import './Sidebar.css';
 
@@ -29,6 +29,7 @@ function Sidebar() {
     { path: '/profile', icon: User, label: 'Profile', color: '#64748b' },
     { path: '/favorites', icon: Heart, label: 'My Favorites', color: '#f87171' },
     { path: '/history', icon: Clock, label: 'Watch History', color: '#94a3b8' },
+    { path: '/my-ratings', icon: Star, label: 'My Ratings', color: '#fbbf24' },
   ] : [];
 
   const isActive = (path) => {
