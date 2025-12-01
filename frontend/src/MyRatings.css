@@ -127,7 +127,7 @@
   overflow: hidden;
 }
 
-/* Controls - IMPROVED DROPDOWN */
+/* Controls */
 .ratings-controls {
   display: flex;
   justify-content: space-between;
@@ -170,49 +170,52 @@
   color: #fff;
 }
 
-/* IMPROVED DROPDOWN STYLING */
+/* PERFECT DROPDOWN STYLING */
 .sort-select {
-  padding: 12px 40px 12px 16px; /* Add right padding for arrow */
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+  position: relative;
+  padding: 14px 50px 14px 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
   border: 2px solid #6366f1;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #f1f5f9;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
-  appearance: none; /* Remove default arrow */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23a5b4fc' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  background-position: right 16px center;
+  background-size: 20px;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  min-width: 200px;
 }
 
 .sort-select:hover {
   border-color: #818cf8;
-  background: linear-gradient(135deg, rgba(51, 65, 85, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
 }
 
 .sort-select:focus {
   outline: none;
   border-color: #a5b4fc;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2), 0 6px 20px rgba(99, 102, 241, 0.4);
 }
 
 .sort-select option {
   background: #1e293b;
   color: #f1f5f9;
-  padding: 12px;
+  padding: 14px 20px;
   font-weight: 600;
+  font-size: 14px;
 }
 
 /* Ratings Grid */
 .ratings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 24px;
 }
 
@@ -224,7 +227,6 @@
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  height: 100%; /* Ensure consistent height */
 }
 
 .rating-card:hover {
@@ -233,26 +235,25 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 
-/* FIXED: Poster Section - NO MORE EMPTY SPACE */
+/* FIXED: Poster - NO EMPTY SPACE */
 .rating-card-poster {
   position: relative;
   width: 100%;
-  aspect-ratio: 2/3; /* ← CHANGED: Use aspect ratio instead of fixed height */
+  padding-bottom: 150%; /* 2:3 aspect ratio (height = width * 1.5) */
   cursor: pointer;
   overflow: hidden;
+  background: #0f172a;
   flex-shrink: 0;
-  background: #0f172a; /* Fallback color */
 }
 
 .rating-card-poster img {
-  position: absolute; /* ← ADDED: Absolute positioning */
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
-  display: block;
   transition: transform 0.3s ease;
 }
 
@@ -261,6 +262,9 @@
 }
 
 .placeholder-poster {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -367,7 +371,7 @@
 .rating-actions {
   display: flex;
   gap: 8px;
-  margin-top: auto; /* Push to bottom */
+  margin-top: auto;
 }
 
 .action-btn {
@@ -484,7 +488,7 @@
   }
 
   .ratings-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 16px;
   }
 }
