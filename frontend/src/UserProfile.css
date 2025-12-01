@@ -1,4 +1,4 @@
-/* User Profile Page - Discord Style with MediaMingle Theme - FIXED UI */
+/* User Profile Page - Centered Modern Layout */
 
 .profile-page {
   min-height: 100vh;
@@ -49,7 +49,7 @@
   transform: translateX(-4px);
 }
 
-/* Banner - FIXED HEIGHT */
+/* Banner */
 .profile-banner {
   height: 180px;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -58,11 +58,12 @@
   margin-bottom: 80px;
 }
 
-/* Avatar - FIXED POSITIONING */
+/* Avatar - CENTERED */
 .profile-avatar-large {
   position: absolute;
   bottom: -70px;
-  left: 40px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 140px;
   height: 140px;
   border-radius: 50%;
@@ -105,7 +106,7 @@
   }
 }
 
-/* Profile Info - FIXED LAYOUT */
+/* Profile Info - CENTERED */
 .profile-info {
   background: rgba(30, 41, 59, 0.6);
   backdrop-filter: blur(10px);
@@ -113,6 +114,7 @@
   border-radius: 0 0 16px 16px;
   padding: 24px 40px 32px;
   margin-top: -16px;
+  text-align: center;
 }
 
 .profile-username {
@@ -120,60 +122,68 @@
   font-weight: 800;
   color: #f1f5f9;
   margin: 0 0 8px 0;
-  padding-left: 200px;
 }
 
 .profile-bio {
   font-size: 16px;
-  color: #cbd5e1;
+  color: #94a3b8;
   margin: 0 0 24px 0;
   line-height: 1.6;
-  padding-left: 200px;
   min-height: 24px;
+  font-style: italic;
 }
 
-/* Stats - IMPROVED LAYOUT */
+/* Stats - CENTERED GRID */
 .profile-stats {
-  display: flex;
-  gap: 32px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-  padding-left: 200px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  max-width: 700px;
+  margin: 0 auto 24px;
 }
 
 .stat-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  color: #cbd5e1;
-  padding: 8px 16px;
+  gap: 6px;
+  padding: 16px 12px;
   background: rgba(51, 65, 85, 0.3);
-  border-radius: 10px;
+  border: 2px solid #334155;
+  border-radius: 12px;
   transition: all 0.3s ease;
 }
 
 .stat-item:hover {
   background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
   transform: translateY(-2px);
 }
 
+.stat-item svg {
+  color: #6366f1;
+}
+
 .stat-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #f1f5f9;
+  line-height: 1;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 12px;
   color: #94a3b8;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* Actions */
+/* Actions - CENTERED */
 .profile-actions {
   display: flex;
   gap: 12px;
-  padding-left: 200px;
+  justify-content: center;
 }
 
 .profile-action-btn {
@@ -218,7 +228,7 @@
   cursor: not-allowed;
 }
 
-/* Tabs - IMPROVED DESIGN */
+/* Tabs */
 .profile-tabs {
   max-width: 1200px;
   margin: 32px auto 0;
@@ -431,29 +441,16 @@
   .profile-avatar-large {
     width: 100px;
     height: 100px;
-    left: 50%;
-    transform: translateX(-50%);
     bottom: -50px;
   }
 
   .profile-info {
     padding: 80px 20px 24px;
-    text-align: center;
-  }
-
-  .profile-username,
-  .profile-bio,
-  .profile-stats,
-  .profile-actions {
-    padding-left: 0;
   }
 
   .profile-stats {
-    justify-content: center;
-  }
-
-  .profile-actions {
-    justify-content: center;
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 400px;
   }
 
   .profile-content {
