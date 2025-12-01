@@ -86,3 +86,54 @@ class RatingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Follow Schemas
+class FollowCreate(BaseModel):
+    following_id: int
+
+class FollowResponse(BaseModel):
+    id: int
+    follower_id: int
+    following_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# User Profile (Public View)
+class UserProfile(BaseModel):
+    id: int
+    username: str
+    bio: Optional[str]
+    avatar_url: Optional[str]
+    created_at: datetime
+    is_online: bool
+    
+    # Stats
+    followers_count: int
+    following_count: int
+    ratings_count: int
+    favorites_count: int
+    
+    class Config:
+        from_attributes = True
+
+# Activity Feed Schema
+class ActivityResponse(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    avatar_url: Optional[str]
+    activity_type: str
+    content_type: Optional[str]
+    content_id: Optional[str]
+    content_title: Optional[str]
+    content_poster: Optional[str]
+    rating_value: Optional[float]
+    review_text: Optional[str]
+    target_user_id: Optional[int]
+    target_username: Optional[str]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True

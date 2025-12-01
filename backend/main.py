@@ -7,7 +7,7 @@ import requests
 import os
 import time
 
-from database import get_db, init_db, User, Favorite, History, Rating
+from database import get_db, init_db, User, Favorite, History, Rating, Follow, Activity
 from schemas import UserCreate, UserLogin, UserResponse, Token, FavoriteCreate, FavoriteResponse, HistoryCreate, HistoryResponse, RatingCreate, RatingUpdate, RatingResponse
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
@@ -720,7 +720,274 @@ def get_tv_genres():
     params = {"api_key": TMDB_API_KEY}
     return requests.get(url, params=params).json()
 
+# ============ SOCIAL FEATURES ============
+
+# Search users
+@app.get("/users/search")
+def search_users(
+    query: str = Query(..., min_length=1),
+    limit: int = Query(20, le=50),
+    db: Session = Depends(get_db)
+):
+    users = db.query(User).filter(
+        User.username.ilike(f"%{query}%")
+    ).limit(limit).all()
+    
+    return [{
+        "id": user.id,
+        "username": user.username,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio,
+        "is_online": user.is_online
+    } for user in users]
+
+# Get public user profile
+@app.get("/users/{user_id}/profile")
+def get_user_profile(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get stats
+    followers_count = db.query(Follow).filter(Follow.following_id == user_id).count()
+    following_count = db.query(Follow).filter(Follow.follower_id == user_id).count()
+    ratings_count = db.query(Rating).filter(Rating.user_id == user_id).count()
+    favorites_count = db.query(Favorite).filter(Favorite.user_id == user_id).count()
+    
+    # Check if current user follows this user
+    is_following = db.query(Follow).filter(
+        Follow.follower_id == current_user.id,
+        Follow.following_id == user_id
+    ).first() is not None
+    
+    return {
+        "id": user.id,
+        "username": user.username,
+        "bio": user.bio,
+        "avatar_url": user.avatar_url,
+        "created_at": user.created_at,
+        "is_online": user.is_online,
+        "last_seen": user.last_seen,
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "ratings_count": ratings_count,
+        "favorites_count": favorites_count,
+        "is_following": is_following
+    }
+
+# Get user's public ratings
+@app.get("/users/{user_id}/ratings")
+def get_user_ratings(
+    user_id: int,
+    limit: int = Query(20, le=100),
+    db: Session = Depends(get_db)
+):
+    ratings = db.query(Rating).filter(
+        Rating.user_id == user_id
+    ).order_by(Rating.rated_at.desc()).limit(limit).all()
+    
+    return ratings
+
+# Get user's public favorites
+@app.get("/users/{user_id}/favorites")
+def get_user_favorites(
+    user_id: int,
+    limit: int = Query(20, le=100),
+    db: Session = Depends(get_db)
+):
+    favorites = db.query(Favorite).filter(
+        Favorite.user_id == user_id
+    ).order_by(Favorite.added_at.desc()).limit(limit).all()
+    
+    return favorites
+
+# Follow a user
+@app.post("/follow/{user_id}")
+def follow_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Can't follow yourself
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+    
+    # Check if user exists
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already following
+    existing = db.query(Follow).filter(
+        Follow.follower_id == current_user.id,
+        Follow.following_id == user_id
+    ).first()
+    
+    if existing:
+        return {"message": "Already following", "follow_id": existing.id}
+    
+    # Create follow
+    new_follow = Follow(
+        follower_id=current_user.id,
+        following_id=user_id
+    )
+    db.add(new_follow)
+    
+    # Create activity
+    activity = Activity(
+        user_id=current_user.id,
+        activity_type="follow",
+        target_user_id=user_id
+    )
+    db.add(activity)
+    
+    db.commit()
+    db.refresh(new_follow)
+    
+    return {"message": "Successfully followed", "follow_id": new_follow.id}
+
+# Unfollow a user
+@app.delete("/unfollow/{user_id}")
+def unfollow_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    follow = db.query(Follow).filter(
+        Follow.follower_id == current_user.id,
+        Follow.following_id == user_id
+    ).first()
+    
+    if not follow:
+        raise HTTPException(status_code=404, detail="Not following this user")
+    
+    db.delete(follow)
+    db.commit()
+    
+    return {"message": "Successfully unfollowed"}
+
+# Get followers list
+@app.get("/users/{user_id}/followers")
+def get_followers(
+    user_id: int,
+    limit: int = Query(50, le=200),
+    db: Session = Depends(get_db)
+):
+    follows = db.query(Follow).filter(
+        Follow.following_id == user_id
+    ).limit(limit).all()
+    
+    followers = []
+    for follow in follows:
+        user = follow.follower
+        followers.append({
+            "id": user.id,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio,
+            "is_online": user.is_online,
+            "followed_at": follow.created_at
+        })
+    
+    return followers
+
+# Get following list
+@app.get("/users/{user_id}/following")
+def get_following(
+    user_id: int,
+    limit: int = Query(50, le=200),
+    db: Session = Depends(get_db)
+):
+    follows = db.query(Follow).filter(
+        Follow.follower_id == user_id
+    ).limit(limit).all()
+    
+    following = []
+    for follow in follows:
+        user = follow.following
+        following.append({
+            "id": user.id,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio,
+            "is_online": user.is_online,
+            "followed_at": follow.created_at
+        })
+    
+    return following
+
+# Get activity feed (from people you follow)
+@app.get("/feed")
+def get_activity_feed(
+    limit: int = Query(50, le=200),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Get list of users current user follows
+    following_ids = db.query(Follow.following_id).filter(
+        Follow.follower_id == current_user.id
+    ).all()
+    following_ids = [f[0] for f in following_ids]
+    
+    # Get activities from followed users
+    activities = db.query(Activity).filter(
+        Activity.user_id.in_(following_ids)
+    ).order_by(Activity.created_at.desc()).limit(limit).all()
+    
+    # Format response
+    feed = []
+    for activity in activities:
+        user = db.query(User).filter(User.id == activity.user_id).first()
+        
+        item = {
+            "id": activity.id,
+            "user_id": user.id,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "activity_type": activity.activity_type,
+            "content_type": activity.content_type,
+            "content_id": activity.content_id,
+            "content_title": activity.content_title,
+            "content_poster": activity.content_poster,
+            "rating_value": activity.rating_value,
+            "review_text": activity.review_text,
+            "created_at": activity.created_at
+        }
+        
+        # Add target user info for follow activities
+        if activity.activity_type == "follow" and activity.target_user_id:
+            target_user = db.query(User).filter(User.id == activity.target_user_id).first()
+            if target_user:
+                item["target_username"] = target_user.username
+        
+        feed.append(item)
+    
+    return feed
+
+# Update user profile
+@app.put("/profile/update")
+def update_profile(
+    bio: Optional[str] = None,
+    avatar_url: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if bio is not None:
+        current_user.bio = bio
+    if avatar_url is not None:
+        current_user.avatar_url = avatar_url
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "Profile updated", "user": current_user}
+
 # Health check
 @app.get("/")
 def read_root():
     return {"status": "MediaMingle API is running!"}
+

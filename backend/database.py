@@ -14,7 +14,6 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# User Model
 class User(Base):
     __tablename__ = "users"
     
@@ -23,6 +22,12 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # ADD THESE NEW FIELDS:
+    bio = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    is_online = Column(Boolean, default=False)
+    last_seen = Column(DateTime, default=datetime.utcnow)
     
     favorites = relationship("Favorite", back_populates="user")
     history = relationship("History", back_populates="user")
@@ -81,3 +86,34 @@ class Rating(Base):
     rated_at = Column(DateTime, default=datetime.utcnow)
     
     user = relationship("User", back_populates="ratings")
+
+# Follow Model
+class Follow(Base):
+    __tablename__ = "follows"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    follower_id = Column(Integer, ForeignKey("users.id"))  # User who follows
+    following_id = Column(Integer, ForeignKey("users.id"))  # User being followed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    follower = relationship("User", foreign_keys=[follower_id], backref="following_relationships")
+    following = relationship("User", foreign_keys=[following_id], backref="follower_relationships")
+
+# Activity Model (for feed)
+class Activity(Base):
+    __tablename__ = "activities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    activity_type = Column(String)  # "rating", "favorite", "follow"
+    content_type = Column(String, nullable=True)  # "movies", "tv", "anime"
+    content_id = Column(String, nullable=True)
+    content_title = Column(String, nullable=True)
+    content_poster = Column(String, nullable=True)
+    rating_value = Column(Float, nullable=True)
+    review_text = Column(String, nullable=True)
+    target_user_id = Column(Integer, nullable=True)  # For follow activities
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", backref="activities")
